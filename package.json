@@ -1,14 +1,21 @@
 {
   "name": "healthhome_backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "HealthHome Backend API",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "healthhome",
+    "healthcare",
+    "backend",
+    "nodejs",
+    "express"
+  ],
+  "author": "Sanvi",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
