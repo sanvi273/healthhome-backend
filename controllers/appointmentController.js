@@ -6,8 +6,12 @@ async (req, res) => {
 
   try {
 
+    console.log("BODY:", req.body);
+
     const appointment =
     await Appointment.create(req.body);
+
+    console.log("SAVED:", appointment);
 
     res.json({
       success: true,
@@ -15,6 +19,8 @@ async (req, res) => {
     });
 
   } catch (error) {
+
+    console.log("ERROR:", error);
 
     res.status(500).json({
       success: false,
