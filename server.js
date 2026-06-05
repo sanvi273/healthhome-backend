@@ -24,6 +24,8 @@ require("./routes/pharmacyRoutes");
 const appointmentRoutes =
 require("./routes/appointmentRoutes");
 
+const profileRoutes =
+require("./routes/profileRoutes");
 
 // ================= APP =================
 
@@ -67,6 +69,12 @@ app.use(
 app.use(
   "/api/appointments",
   appointmentRoutes
+);
+
+// PROFILE ROUTES
+app.use(
+  "/api/profile",
+  profileRoutes
 );
 
 
