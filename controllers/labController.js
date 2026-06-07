@@ -8,15 +8,47 @@ const addLab = async (req, res) => {
 
   try {
 
+    const existingLab =
+      await Lab.findOne({
+        phone: req.body.phone,
+      });
+
+    if (existingLab) {
+
+      existingLab.name =
+        req.body.name;
+
+      existingLab.labType =
+        req.body.labType;
+
+      existingLab.experience =
+        req.body.experience;
+
+      existingLab.address =
+        req.body.address;
+
+      await existingLab.save();
+
+      return res.status(200).json({
+
+        success: true,
+
+        message:
+          "Lab updated successfully",
+
+        lab: existingLab,
+      });
+    }
+
     const lab =
-    await Lab.create(req.body);
+      await Lab.create(req.body);
 
     res.status(201).json({
 
       success: true,
 
       message:
-      "Lab added successfully",
+        "Lab added successfully",
 
       lab,
     });

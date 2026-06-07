@@ -23,10 +23,11 @@ new mongoose.Schema({
     required: true,
   },
 
-  phone: {
-    type: String,
-    required: true,
-  },
+ phone: {
+  type: String,
+  required: true,
+  unique: true,
+},
 
   rating: {
     type: Number,

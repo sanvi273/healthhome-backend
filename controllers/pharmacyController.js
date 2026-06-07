@@ -8,15 +8,47 @@ const addPharmacy = async (req, res) => {
 
   try {
 
+    const existingPharmacy =
+      await Pharmacy.findOne({
+        phone: req.body.phone,
+      });
+
+    if (existingPharmacy) {
+
+      existingPharmacy.name =
+        req.body.name;
+
+      existingPharmacy.shopType =
+        req.body.shopType;
+
+      existingPharmacy.experience =
+        req.body.experience;
+
+      existingPharmacy.address =
+        req.body.address;
+
+      await existingPharmacy.save();
+
+      return res.status(200).json({
+
+        success: true,
+
+        message:
+          "Pharmacy updated successfully",
+
+        pharmacy: existingPharmacy,
+      });
+    }
+
     const pharmacy =
-    await Pharmacy.create(req.body);
+      await Pharmacy.create(req.body);
 
     res.status(201).json({
 
       success: true,
 
       message:
-      "Pharmacy added successfully",
+        "Pharmacy added successfully",
 
       pharmacy,
     });
