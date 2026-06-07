@@ -10,7 +10,7 @@ const addDoctor = async (req, res) => {
 
         const existingDoctor =
             await Doctor.findOne({
-                name: req.body.name,
+               phone: req.body.phone,
             });
 
         if (existingDoctor) {
