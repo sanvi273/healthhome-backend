@@ -8,15 +8,50 @@ const addDoctor = async (req, res) => {
 
     try {
 
+        const existingDoctor =
+            await Doctor.findOne({
+                name: req.body.name,
+            });
+
+        if (existingDoctor) {
+
+            existingDoctor.specialization =
+                req.body.specialization;
+
+            existingDoctor.experience =
+                req.body.experience;
+
+            existingDoctor.fees =
+                req.body.fees;
+
+            existingDoctor.hospital =
+                req.body.hospital;
+
+            existingDoctor.about =
+                req.body.about;
+
+            await existingDoctor.save();
+
+            return res.status(200).json({
+
+                success: true,
+
+                message:
+                    "Doctor updated successfully",
+
+                doctor: existingDoctor,
+            });
+        }
+
         const doctor =
-        await Doctor.create(req.body);
+            await Doctor.create(req.body);
 
         res.status(201).json({
 
             success: true,
 
             message:
-            "Doctor added successfully",
+                "Doctor added successfully",
 
             doctor,
         });
