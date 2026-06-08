@@ -40,32 +40,30 @@ res.status(500).json({
 
 const getMedicines = async (req, res) => {
 
-try {
+  try {
 
-```
-const medicines =
-await Medicine.find();
+    console.log("GET MEDICINES CALLED");
 
-res.status(200).json({
+    const medicines =
+      await Medicine.find();
 
-  success: true,
+    console.log(medicines);
 
-  medicines,
-});
-```
+    res.status(200).json({
+      success: true,
+      medicines,
+    });
 
-} catch (error) {
+  } catch (error) {
 
-```
-res.status(500).json({
+    console.log("GET MEDICINES ERROR:");
+    console.log(error);
 
-  success: false,
-
-  message: error.message,
-});
-```
-
-}
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };
 
 // ================= DELETE MEDICINE =================
