@@ -98,51 +98,42 @@ const deleteMedicine = async (req, res) => {
 // ================= UPDATE MEDICINE =================
 
 const updateMedicine = async (req, res) => {
+  try {
 
-console.log("UPDATE REQUEST RECEIVED");
-console.log(req.params.id);
-console.log(req.body);
+    console.log("UPDATE REQUEST RECEIVED");
+    console.log(req.params.id);
+    console.log(req.body);
 
-try {
+    const medicine =
+      await Medicine.findByIdAndUpdate(
+        req.params.id,
+        {
+          medicineName: req.body.medicineName,
+          price: req.body.price,
+          stock: req.body.stock,
+          description: req.body.description,
+        },
+        {
+          new: true,
+        }
+      );
 
-```
-const medicine =
-await Medicine.findByIdAndUpdate(
+    return res.status(200).json({
+      success: true,
+      message: "Medicine updated successfully",
+      medicine,
+    });
 
-  req.params.id,
+  } catch (error) {
 
-  req.body,
+    console.log("UPDATE ERROR:");
+    console.log(error);
 
-  {
-    new: true,
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
-);
-
-res.status(200).json({
-
-  success: true,
-
-  message:
-  "Medicine updated successfully",
-
-  medicine,
-});
-```
-
-} catch (error) {
-
-```
-console.log(error);
-
-res.status(500).json({
-
-  success: false,
-
-  message: error.message,
-});
-```
-
-}
 };
 
 module.exports = {
