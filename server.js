@@ -27,6 +27,9 @@ require("./routes/appointmentRoutes");
 const profileRoutes =
 require("./routes/profileRoutes");
 
+const medicineRoutes =
+require("./routes/medicineRoutes");
+
 // ================= APP =================
 
 const app = express();
@@ -77,7 +80,10 @@ app.use(
   profileRoutes
 );
 
-
+app.use(
+  "/api/medicines",
+  medicineRoutes
+);
 // ================= TEST ROUTE =================
 
 app.get("/", (req, res) => {
