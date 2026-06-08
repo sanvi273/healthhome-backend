@@ -7,7 +7,7 @@ const addMedicine = async (req, res) => {
 
 try {
 
-```
+
 const medicine =
 await Medicine.create(req.body);
 
@@ -20,18 +20,17 @@ res.status(201).json({
 
   medicine,
 });
-```
+
 
 } catch (error) {
 
-```
 res.status(500).json({
 
   success: false,
 
   message: error.message,
 });
-```
+
 
 }
 };
@@ -69,35 +68,27 @@ const getMedicines = async (req, res) => {
 // ================= DELETE MEDICINE =================
 
 const deleteMedicine = async (req, res) => {
-
   try {
-
     console.log("DELETE REQUEST RECEIVED");
-    console.log(req.params.id);
+    console.log("ID:", req.params.id);
 
-    const medicine =
-      await Medicine.findByIdAndDelete(
-        req.params.id
-      );
+    const result = await Medicine.findByIdAndDelete(
+      req.params.id.trim()
+    );
 
-    if (!medicine) {
-      return res.status(404).json({
-        success: false,
-        message: "Medicine not found",
-      });
-    }
+    console.log("RESULT:", result);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Medicine deleted successfully",
     });
 
   } catch (error) {
 
-    console.log("DELETE ERROR:");
+    console.log("DELETE FULL ERROR:");
     console.log(error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
