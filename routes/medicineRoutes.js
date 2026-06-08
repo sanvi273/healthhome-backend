@@ -8,6 +8,9 @@ const {
 
   addMedicine,
   getMedicines,
+  deleteMedicine,
+  updateMedicine,
+
 
 } = require(
   "../controllers/medicineController"
@@ -21,6 +24,16 @@ router.post(
 router.get(
   "/all",
   getMedicines
+);
+
+router.delete(
+  "/:id",
+  deleteMedicine
+);
+
+router.put(
+  "/:id",
+  updateMedicine
 );
 
 module.exports = router;

@@ -64,4 +64,74 @@ module.exports = {
 
   addMedicine,
   getMedicines,
+  deleteMedicine,
+  updateMedicine,
+};
+
+// ================= DELETE MEDICINE =================
+
+const deleteMedicine = async (req, res) => {
+
+  try {
+
+    await Medicine.findByIdAndDelete(
+      req.params.id
+    );
+
+    res.status(200).json({
+
+      success: true,
+
+      message:
+      "Medicine deleted successfully",
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+
+      success: false,
+
+      message: error.message,
+    });
+  }
+};
+
+// ================= UPDATE MEDICINE =================
+
+const updateMedicine = async (req, res) => {
+
+  try {
+
+    const medicine =
+    await Medicine.findByIdAndUpdate(
+
+      req.params.id,
+
+      req.body,
+
+      {
+        new: true,
+      }
+    );
+
+    res.status(200).json({
+
+      success: true,
+
+      message:
+      "Medicine updated successfully",
+
+      medicine,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+
+      success: false,
+
+      message: error.message,
+    });
+  }
 };
