@@ -1,137 +1,166 @@
 const Medicine =
 require("../models/medicine");
 
-
 // ================= ADD MEDICINE =================
 
 const addMedicine = async (req, res) => {
 
-  try {
+try {
 
-    const medicine =
-    await Medicine.create(req.body);
+```
+const medicine =
+await Medicine.create(req.body);
 
-    res.status(201).json({
+res.status(201).json({
 
-      success: true,
+  success: true,
 
-      message:
-      "Medicine added successfully",
+  message:
+  "Medicine added successfully",
 
-      medicine,
-    });
+  medicine,
+});
+```
 
-  } catch (error) {
+} catch (error) {
 
-    res.status(500).json({
+```
+res.status(500).json({
 
-      success: false,
+  success: false,
 
-      message: error.message,
-    });
-  }
+  message: error.message,
+});
+```
+
+}
 };
-
 
 // ================= GET ALL MEDICINES =================
 
 const getMedicines = async (req, res) => {
 
-  try {
+try {
 
-    const medicines =
-    await Medicine.find();
+```
+const medicines =
+await Medicine.find();
 
-    res.status(200).json({
+res.status(200).json({
 
-      success: true,
+  success: true,
 
-      medicines,
-    });
+  medicines,
+});
+```
 
-  } catch (error) {
+} catch (error) {
 
-    res.status(500).json({
+```
+res.status(500).json({
 
-      success: false,
+  success: false,
 
-      message: error.message,
-    });
-  }
-};
+  message: error.message,
+});
+```
 
-module.exports = {
-
-  addMedicine,
-  getMedicines,
-  deleteMedicine,
-  updateMedicine,
+}
 };
 
 // ================= DELETE MEDICINE =================
 
 const deleteMedicine = async (req, res) => {
 
-  try {
+console.log("DELETE REQUEST RECEIVED");
+console.log(req.params.id);
 
-    await Medicine.findByIdAndDelete(
-      req.params.id
-    );
+try {
 
-    res.status(200).json({
+```
+await Medicine.findByIdAndDelete(
+  req.params.id
+);
 
-      success: true,
+res.status(200).json({
 
-      message:
-      "Medicine deleted successfully",
-    });
+  success: true,
 
-  } catch (error) {
+  message:
+  "Medicine deleted successfully",
+});
+```
 
-    res.status(500).json({
+} catch (error) {
 
-      success: false,
+```
+console.log(error);
 
-      message: error.message,
-    });
-  }
+res.status(500).json({
+
+  success: false,
+
+  message: error.message,
+});
+```
+
+}
 };
 
 // ================= UPDATE MEDICINE =================
 
 const updateMedicine = async (req, res) => {
 
-  try {
+console.log("UPDATE REQUEST RECEIVED");
+console.log(req.params.id);
+console.log(req.body);
 
-    const medicine =
-    await Medicine.findByIdAndUpdate(
+try {
 
-      req.params.id,
+```
+const medicine =
+await Medicine.findByIdAndUpdate(
 
-      req.body,
+  req.params.id,
 
-      {
-        new: true,
-      }
-    );
+  req.body,
 
-    res.status(200).json({
-
-      success: true,
-
-      message:
-      "Medicine updated successfully",
-
-      medicine,
-    });
-
-  } catch (error) {
-
-    res.status(500).json({
-
-      success: false,
-
-      message: error.message,
-    });
+  {
+    new: true,
   }
+);
+
+res.status(200).json({
+
+  success: true,
+
+  message:
+  "Medicine updated successfully",
+
+  medicine,
+});
+```
+
+} catch (error) {
+
+```
+console.log(error);
+
+res.status(500).json({
+
+  success: false,
+
+  message: error.message,
+});
+```
+
+}
+};
+
+module.exports = {
+
+addMedicine,
+getMedicines,
+deleteMedicine,
+updateMedicine,
 };
