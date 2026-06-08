@@ -70,39 +70,38 @@ const getMedicines = async (req, res) => {
 
 const deleteMedicine = async (req, res) => {
 
-console.log("DELETE REQUEST RECEIVED");
-console.log(req.params.id);
+  try {
 
-try {
+    console.log("DELETE REQUEST RECEIVED");
+    console.log(req.params.id);
 
-```
-await Medicine.findByIdAndDelete(
-  req.params.id
-);
+    const medicine =
+      await Medicine.findByIdAndDelete(
+        req.params.id
+      );
 
-res.status(200).json({
+    if (!medicine) {
+      return res.status(404).json({
+        success: false,
+        message: "Medicine not found",
+      });
+    }
 
-  success: true,
+    res.status(200).json({
+      success: true,
+      message: "Medicine deleted successfully",
+    });
 
-  message:
-  "Medicine deleted successfully",
-});
-```
+  } catch (error) {
 
-} catch (error) {
+    console.log("DELETE ERROR:");
+    console.log(error);
 
-```
-console.log(error);
-
-res.status(500).json({
-
-  success: false,
-
-  message: error.message,
-});
-```
-
-}
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };
 
 // ================= UPDATE MEDICINE =================
