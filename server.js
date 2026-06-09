@@ -30,6 +30,12 @@ require("./routes/profileRoutes");
 const medicineRoutes =
 require("./routes/medicineRoutes");
 
+const orderRoutes = 
+require("./routes/orderRoutes");
+
+const cartRoutes = require(
+  "./routes/cartRoutes"
+);
 // ================= APP =================
 
 const app = express();
@@ -84,6 +90,17 @@ app.use(
   "/api/medicines",
   medicineRoutes
 );
+
+app.use(
+  "/api/orders",
+  orderRoutes
+);
+
+app.use(
+  "/api/cart",
+  cartRoutes
+);
+
 // ================= TEST ROUTE =================
 
 app.get("/", (req, res) => {
