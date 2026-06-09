@@ -15,6 +15,13 @@ router.post(
   addToCart
 );
 
+router.get("/test", (req, res) => {
+  res.json({
+    success: true,
+    message: "Cart Route Working",
+  });
+});
+
 router.get(
   "/:phone",
   getCartItems
