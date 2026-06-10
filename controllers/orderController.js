@@ -3,7 +3,10 @@ const Order = require("../models/orderModel");
 // Place Order
 const placeOrder = async (req, res) => {
   try {
-    const order = await Order.create(req.body);
+    console.log("ORDER DATA:");
+console.log(req.body);
+
+const order = await Order.create(req.body);
 
     res.status(201).json({
       success: true,
@@ -21,8 +24,9 @@ const placeOrder = async (req, res) => {
 const getPharmacyOrders = async (req, res) => {
   try {
     const orders = await Order.find({
-      pharmacyId: req.params.pharmacyId,
-    }).sort({ createdAt: -1 });
+  pharmacyId: req.params.pharmacyId,
+  status: "Pending",
+}).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,

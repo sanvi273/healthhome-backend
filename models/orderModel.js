@@ -1,37 +1,38 @@
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema(
-  {
-    patientId: {
-      type: String,
-      required: true,
-    },
+{
+  patientId: String,
 
-    patientName: {
-      type: String,
-      required: true,
-    },
+  patientName: String,
 
-    pharmacyId: {
-      type: String,
-      required: true,
-    },
+  pharmacyId: String,
 
-    medicines: [
-      {
-        medicineName: String,
-        quantity: Number,
-      },
-    ],
+  address: String,
 
-    status: {
-      type: String,
-      default: "Pending",
+  notes: String,
+
+  prescriptionImage: String,
+
+  medicines: [
+    {
+      medicineName: String,
+      quantity: Number,
     },
+  ],
+
+  status: {
+    type: String,
+    default: "Pending",
   },
-  {
-    timestamps: true,
-  }
+},
+{
+  timestamps: true,
+}
 );
 
-module.exports = mongoose.model("Order", orderSchema);
+module.exports =
+mongoose.model(
+  "Order",
+  orderSchema
+);
