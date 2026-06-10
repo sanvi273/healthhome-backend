@@ -4,59 +4,98 @@ require("../models/medicine");
 // ================= ADD MEDICINE =================
 
 const addMedicine = async (req, res) => {
-
-try {
-
-
-const medicine =
-await Medicine.create(req.body);
-
-res.status(201).json({
-
-  success: true,
-
-  message:
-  "Medicine added successfully",
-
-  medicine,
-});
-
-
-} catch (error) {
-
-res.status(500).json({
-
-  success: false,
-
-  message: error.message,
-});
-
-
-}
-};
-
-// ================= GET ALL MEDICINES =================
-
-const getMedicines = async (req, res) => {
-
   try {
 
-    console.log("GET MEDICINES CALLED");
+    const medicine = await Medicine.create({
 
-    const medicines =
-      await Medicine.find();
+      pharmacyPhone:
+          req.body.pharmacyPhone,
 
-    console.log(medicines);
+      medicineName:
+          req.body.medicineName,
 
-    res.status(200).json({
+      category:
+          req.body.category,
+
+      manufacturer:
+          req.body.manufacturer,
+
+      description:
+          req.body.description,
+
+      price:
+          req.body.price,
+
+      stock:
+          req.body.stock,
+
+      expiryDate:
+          req.body.expiryDate,
+
+      image:
+          req.body.image,
+
+      status:
+          req.body.status ??
+          "Available",
+    });
+
+    res.status(201).json({
       success: true,
-      medicines,
+      message:
+          "Medicine added successfully",
+      medicine,
     });
 
   } catch (error) {
 
-    console.log("GET MEDICINES ERROR:");
-    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ================= GET ALL MEDICINES =================
+
+
+const getInventoryStats =
+async (req, res) => {
+
+  try {
+
+    const medicines =
+        await Medicine.find();
+
+    const total =
+        medicines.length;
+
+    const lowStock =
+        medicines.filter(
+      (m) => m.stock < 10,
+    ).length;
+
+    const outOfStock =
+        medicines.filter(
+      (m) => m.stock <= 0,
+    ).length;
+
+    const available =
+        medicines.filter(
+      (m) =>
+          m.status ==
+          "Available",
+    ).length;
+
+    res.status(200).json({
+      success: true,
+      total,
+      lowStock,
+      outOfStock,
+      available,
+    });
+
+  } catch (error) {
 
     res.status(500).json({
       success: false,
@@ -138,8 +177,9 @@ const updateMedicine = async (req, res) => {
 
 module.exports = {
 
-addMedicine,
-getMedicines,
-deleteMedicine,
-updateMedicine,
+  addMedicine,
+  getMedicines,
+  deleteMedicine,
+  updateMedicine,
+  getInventoryStats,
 };

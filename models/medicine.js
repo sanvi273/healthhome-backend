@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 
-const medicineSchema =
-new mongoose.Schema({
+const medicineSchema = new mongoose.Schema({
 
   pharmacyPhone: {
     type: String,
@@ -13,14 +12,14 @@ new mongoose.Schema({
     required: true,
   },
 
-  price: {
+  category: {
     type: String,
-    required: true,
+    default: "Tablet",
   },
 
-  stock: {
+  manufacturer: {
     type: String,
-    required: true,
+    default: "",
   },
 
   description: {
@@ -28,12 +27,41 @@ new mongoose.Schema({
     default: "",
   },
 
+  price: {
+    type: Number,
+    required: true,
+  },
+
+  stock: {
+    type: Number,
+    required: true,
+  },
+
+  expiryDate: {
+    type: String,
+    default: "",
+  },
+
+  image: {
+    type: String,
+    default: "",
+  },
+
+  soldCount: {
+    type: Number,
+    default: 0,
+  },
+
+  status: {
+    type: String,
+    default: "Available",
+  },
+
 }, {
   timestamps: true,
 });
 
-module.exports =
-mongoose.model(
+module.exports = mongoose.model(
   "Medicine",
-  medicineSchema
+  medicineSchema,
 );

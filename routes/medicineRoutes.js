@@ -10,7 +10,7 @@ const {
   getMedicines,
   deleteMedicine,
   updateMedicine,
-
+  getInventoryStats,
 
 } = require(
   "../controllers/medicineController"
@@ -34,6 +34,11 @@ router.delete(
 router.put(
   "/:id",
   updateMedicine
+);
+
+router.get(
+  "/stats",
+  getInventoryStats
 );
 
 module.exports = router;
