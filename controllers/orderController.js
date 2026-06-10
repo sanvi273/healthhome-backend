@@ -23,16 +23,25 @@ const order = await Order.create(req.body);
 // Get Orders For Pharmacy
 const getPharmacyOrders = async (req, res) => {
   try {
+
+    console.log("PHARMACY ID RECEIVED:");
+    console.log(req.params.pharmacyId);
+
     const orders = await Order.find({
-  pharmacyId: req.params.pharmacyId,
-  status: "Pending",
-}).sort({ createdAt: -1 });
+      pharmacyId: req.params.pharmacyId,
+    });
+
+    console.log("ORDERS FOUND:");
+    console.log(orders);
 
     res.status(200).json({
       success: true,
       orders,
     });
+
   } catch (error) {
+     console.log(error);
+
     res.status(500).json({
       success: false,
       message: error.message,
