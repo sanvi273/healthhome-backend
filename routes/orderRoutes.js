@@ -11,10 +11,16 @@ const {
 // Place Order
 router.post("/place", placeOrder);
 
+router.get("/test/all", async (req, res) => {
+  const orders = await Order.find();
+  res.json(orders);
+});
+
 // Pharmacy Orders
 router.get("/pharmacy/:pharmacyId", getPharmacyOrders);
 
 // Update Status
 router.put("/:id/status", updateOrderStatus);
+
 
 module.exports = router;
