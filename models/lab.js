@@ -1,8 +1,6 @@
 const mongoose = require("mongoose");
 
-const labSchema =
-new mongoose.Schema({
-
+const labSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
@@ -43,13 +41,8 @@ new mongoose.Schema({
     type: String,
     default: "",
   },
-
 }, {
   timestamps: true,
 });
 
-module.exports =
-mongoose.model(
-  "Lab",
-  labSchema
-);
+module.exports = mongoose.model("Lab", labSchema);

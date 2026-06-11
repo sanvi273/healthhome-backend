@@ -36,6 +36,11 @@ require("./routes/orderRoutes");
 const cartRoutes = require(
   "./routes/cartRoutes"
 );
+
+const labOrderRoutes =
+require("./routes/labOrderRoutes");
+
+
 // ================= APP =================
 
 const app = express();
@@ -99,6 +104,11 @@ app.use(
 app.use(
   "/api/cart",
   cartRoutes
+);
+
+app.use(
+  "/api/lab-orders",
+  labOrderRoutes
 );
 
 // ================= TEST ROUTE =================
