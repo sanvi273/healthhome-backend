@@ -2,16 +2,86 @@ const mongoose = require("mongoose");
 
 const appointmentSchema = new mongoose.Schema({
 
-  patientName: String,
-  patientPhone: String,
+  // Patient
 
-  doctorName: String,
-  specialization: String,
+  patientName: {
+    type: String,
+    required: true,
+  },
 
-  appointmentDate: String,
-  appointmentTime: String,
+  patientPhone: {
+    type: String,
+    required: true,
+  },
+
+  // Doctor
+
+  doctorId: {
+    type: String,
+    default: "",
+  },
+
+  doctorName: {
+    type: String,
+    required: true,
+  },
+
+  specialization: {
+    type: String,
+    default: "",
+  },
+
+  hospital: {
+    type: String,
+    default: "",
+  },
+
+  fees: {
+    type: Number,
+    default: 0,
+  },
+
+  // Appointment
+
+  appointmentDate: {
+    type: String,
+    required: true,
+  },
+
+  appointmentTime: {
+    type: String,
+    required: true,
+  },
+
+  // Patient Details
+
+  reason: {
+    type: String,
+    default: "",
+  },
+
+  symptoms: {
+    type: String,
+    default: "",
+  },
+
+  medicines: {
+    type: String,
+    default: "",
+  },
+
+  reports: [{
+    type: String,
+  }],
+
+  // Status
 
   status: {
+    type: String,
+    default: "Pending",
+  },
+
+  paymentStatus: {
     type: String,
     default: "Pending",
   },
@@ -20,8 +90,7 @@ const appointmentSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-module.exports =
-mongoose.model(
+module.exports = mongoose.model(
   "Appointment",
   appointmentSchema
 );
