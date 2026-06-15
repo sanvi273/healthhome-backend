@@ -20,6 +20,9 @@ const {
 
   deleteAppointment,
 
+  startConsultation,
+
+
 } = require(
   "../controllers/appointmentController"
 );
@@ -74,6 +77,11 @@ router.put(
 );
 
 // ================= DELETE APPOINTMENT =================
+
+router.put(
+  "/start-consultation/:id",
+  startConsultation
+);
 
 router.delete(
   "/:id",

@@ -337,3 +337,38 @@ async (req, res) => {
     });
   }
 };
+
+// ================= START CONSULTATION =================
+
+exports.startConsultation =
+async (req, res) => {
+
+  try {
+
+    const appointment =
+      await Appointment.findByIdAndUpdate(
+        req.params.id,
+        {
+          consultationStatus: "Ready",
+          meetingId: req.params.id,
+        },
+        {
+          new: true,
+        }
+      );
+
+    res.json({
+      success: true,
+      message:
+        "Consultation started",
+      appointment,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

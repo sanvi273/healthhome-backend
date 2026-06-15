@@ -82,9 +82,19 @@ const appointmentSchema = new mongoose.Schema({
   },
 
   paymentStatus: {
-    type: String,
-    default: "Pending",
-  },
+  type: String,
+  default: "Pending",
+},
+
+consultationStatus: {
+  type: String,
+  default: "Pending",
+},
+
+meetingId: {
+  type: String,
+  default: "",
+},
 
 }, {
   timestamps: true,
