@@ -126,10 +126,64 @@ const loginUser = async (req, res) => {
     }
 };
 
+// ================= UPDATE ONESIGNAL ID =================
+
+const updateOneSignalId = async (req, res) => {
+
+    try {
+
+        const { phone, oneSignalId } = req.body;
+
+        const user = await User.findOneAndUpdate(
+
+            { phone },
+
+            {
+                oneSignalId: oneSignalId,
+            },
+
+            { new: true }
+
+        );
+
+        if (!user) {
+
+            return res.status(404).json({
+
+                success: false,
+
+                message: "User not found",
+
+            });
+
+        }
+
+        res.status(200).json({
+
+            success: true,
+
+            message: "OneSignal ID Updated",
+
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+
+            success: false,
+
+            message: error.message,
+
+        });
+
+    }
+
+};
 
 // ================= EXPORTS =================
 
 module.exports = {
     registerUser,
     loginUser,
+    updateOneSignalId,
 };

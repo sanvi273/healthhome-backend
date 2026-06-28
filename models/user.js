@@ -31,6 +31,11 @@ const userSchema = new mongoose.Schema(
     profileImage: {
         type: String,
     },
+
+    oneSignalId: {
+    type: String,
+    default: "",
+},
 },
 {
     timestamps: true,
