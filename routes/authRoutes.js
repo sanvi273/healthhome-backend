@@ -1,5 +1,7 @@
 const express = require("express");
 
+console.log("✅ authRoutes.js loaded");
+
 const {
     registerUser,
     loginUser,
