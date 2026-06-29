@@ -3,29 +3,21 @@ const express = require("express");
 const router = express.Router();
 
 const {
-
   bookAppointment,
-
   getAppointments,
-
   getDoctorAppointments,
-
   getPatientAppointments,
-
   getAppointmentById,
-
   updateAppointmentStatus,
-
   updatePaymentStatus,
-
   deleteAppointment,
-
   startConsultation,
+  checkReadyConsultation,
+} = require("../controllers/appointmentController");
 
-
-} = require(
-  "../controllers/appointmentController"
-);
+console.log({
+  checkReadyConsultation,
+});
 
 // ================= BOOK APPOINTMENT =================
 
@@ -53,6 +45,11 @@ router.get(
 router.get(
   "/patient/:patientPhone",
   getPatientAppointments
+);
+
+router.get(
+  "/ready/:patientPhone",
+  checkReadyConsultation
 );
 
 // ================= GET SINGLE APPOINTMENT =================

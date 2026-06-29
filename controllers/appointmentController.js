@@ -1,108 +1,95 @@
-const Appointment =
-require("../models/Appointment");
+const Appointment = require("../models/Appointment");
 
 // ================= BOOK APPOINTMENT =================
 
-exports.bookAppointment =
-async (req, res) => {
+exports.bookAppointment = async (req, res) => {
 
   try {
 
-    console.log(
-      "BOOK APPOINTMENT BODY:",
-      req.body
-    );
+    console.log("BOOK APPOINTMENT BODY:", req.body);
 
-    const appointment =
-      await Appointment.create({
-        patientName:
-          req.body.patientName,
+    const appointment = await Appointment.create({
 
-        patientPhone:
-          req.body.patientPhone,
+      patientName: req.body.patientName,
 
-        doctorId:
-          req.body.doctorId || "",
+      patientPhone: req.body.patientPhone,
 
-        doctorName:
-          req.body.doctorName,
+      doctorId: req.body.doctorId || "",
 
-        specialization:
-          req.body.specialization || "",
+      doctorName: req.body.doctorName,
 
-        hospital:
-          req.body.hospital || "",
+      specialization: req.body.specialization || "",
 
-        fees:
-          req.body.fees || 0,
+      hospital: req.body.hospital || "",
 
-        appointmentDate:
-          req.body.appointmentDate,
+      fees: req.body.fees || 0,
 
-        appointmentTime:
-          req.body.appointmentTime,
+      appointmentDate: req.body.appointmentDate,
 
-        reason:
-          req.body.reason || "",
+      appointmentTime: req.body.appointmentTime,
 
-        symptoms:
-          req.body.symptoms || "",
+      reason: req.body.reason || "",
 
-        medicines:
-          req.body.medicines || "",
+      symptoms: req.body.symptoms || "",
 
-        reports:
-          req.body.reports || [],
+      medicines: req.body.medicines || "",
 
-        status: "Pending",
+      reports: req.body.reports || [],
 
-        paymentStatus:
-          req.body.paymentStatus ||
-          "Pending",
-      });
+      status: "Pending",
 
-    console.log(
-      "APPOINTMENT SAVED:",
-      appointment
-    );
+      paymentStatus: req.body.paymentStatus || "Pending",
+
+    });
+
+    console.log("APPOINTMENT SAVED:", appointment);
 
     res.status(201).json({
+
       success: true,
-      message:
-        "Appointment booked successfully",
+
+      message: "Appointment booked successfully",
+
       appointment,
+
     });
 
   } catch (error) {
 
-    console.log(
-      "BOOK APPOINTMENT ERROR:",
-      error
-    );
+    console.log(error);
 
     res.status(500).json({
+
       success: false,
+
       message: error.message,
+
     });
+
   }
+
 };
 
 // ================= GET ALL APPOINTMENTS =================
 
-exports.getAppointments =
-async (req, res) => {
+exports.getAppointments = async (req, res) => {
 
   try {
 
-    const appointments =
-      await Appointment.find()
+    const appointments = await Appointment.find()
+
       .sort({
+
         createdAt: -1,
+
       });
 
     res.json({
+
       success: true,
+
       appointments,
+
     });
 
   } catch (error) {
@@ -110,28 +97,30 @@ async (req, res) => {
     console.log(error);
 
     res.status(500).json({
+
       success: false,
+
       message: error.message,
+
     });
+
   }
+
 };
 
 // ================= GET APPOINTMENTS BY DOCTOR =================
 
-exports.getDoctorAppointments =
-async (req, res) => {
+exports.getDoctorAppointments = async (req, res) => {
 
   try {
 
-    const { doctorName } =
-      req.params;
+    const { doctorName } = req.params;
 
-    const appointments =
-      await Appointment.find({
-        doctorName,
-      }).sort({
-        createdAt: -1,
-      });
+    const appointments = await Appointment.find({
+      doctorName,
+    }).sort({
+      createdAt: -1,
+    });
 
     res.json({
       success: true,
@@ -146,25 +135,24 @@ async (req, res) => {
       success: false,
       message: error.message,
     });
+
   }
+
 };
 
 // ================= GET APPOINTMENTS BY PATIENT =================
 
-exports.getPatientAppointments =
-async (req, res) => {
+exports.getPatientAppointments = async (req, res) => {
 
   try {
 
-    const { patientPhone } =
-      req.params;
+    const { patientPhone } = req.params;
 
-    const appointments =
-      await Appointment.find({
-        patientPhone,
-      }).sort({
-        createdAt: -1,
-      });
+    const appointments = await Appointment.find({
+      patientPhone,
+    }).sort({
+      createdAt: -1,
+    });
 
     res.json({
       success: true,
@@ -179,28 +167,28 @@ async (req, res) => {
       success: false,
       message: error.message,
     });
+
   }
+
 };
 
 // ================= GET SINGLE APPOINTMENT =================
 
-exports.getAppointmentById =
-async (req, res) => {
+exports.getAppointmentById = async (req, res) => {
 
   try {
 
-    const appointment =
-      await Appointment.findById(
-        req.params.id
-      );
+    const appointment = await Appointment.findById(
+      req.params.id
+    );
 
     if (!appointment) {
 
       return res.status(404).json({
         success: false,
-        message:
-          "Appointment not found",
+        message: "Appointment not found",
       });
+
     }
 
     res.json({
@@ -216,47 +204,55 @@ async (req, res) => {
       success: false,
       message: error.message,
     });
+
   }
+
 };
 
 // ================= UPDATE APPOINTMENT STATUS =================
 
-exports.updateAppointmentStatus =
-async (req, res) => {
+exports.updateAppointmentStatus = async (req, res) => {
 
   try {
 
-    const { id } =
-      req.params;
+    const { id } = req.params;
 
-    const { status } =
-      req.body;
+    const { status } = req.body;
 
-    const appointment =
-      await Appointment.findByIdAndUpdate(
-        id,
-        {
-          status,
-        },
-        {
-          new: true,
-        }
-      );
+    const appointment = await Appointment.findByIdAndUpdate(
+
+      id,
+
+      {
+        status,
+      },
+
+      {
+        new: true,
+      }
+
+    );
 
     if (!appointment) {
 
       return res.status(404).json({
+
         success: false,
-        message:
-          "Appointment not found",
+
+        message: "Appointment not found",
+
       });
+
     }
 
     res.json({
+
       success: true,
-      message:
-        "Status updated successfully",
+
+      message: "Status updated successfully",
+
       appointment,
+
     });
 
   } catch (error) {
@@ -264,39 +260,61 @@ async (req, res) => {
     console.log(error);
 
     res.status(500).json({
+
       success: false,
+
       message: error.message,
+
     });
+
   }
+
 };
 
 // ================= UPDATE PAYMENT STATUS =================
 
-exports.updatePaymentStatus =
-async (req, res) => {
+exports.updatePaymentStatus = async (req, res) => {
 
   try {
 
-    const { id } =
-      req.params;
+    const { id } = req.params;
 
-    const { paymentStatus } =
-      req.body;
+    const { paymentStatus } = req.body;
 
-    const appointment =
-      await Appointment.findByIdAndUpdate(
-        id,
-        {
-          paymentStatus,
-        },
-        {
-          new: true,
-        }
-      );
+    const appointment = await Appointment.findByIdAndUpdate(
+
+      id,
+
+      {
+        paymentStatus,
+      },
+
+      {
+        new: true,
+      }
+
+    );
+
+    if (!appointment) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message: "Appointment not found",
+
+      });
+
+    }
 
     res.json({
+
       success: true,
+
+      message: "Payment status updated",
+
       appointment,
+
     });
 
   } catch (error) {
@@ -304,27 +322,45 @@ async (req, res) => {
     console.log(error);
 
     res.status(500).json({
+
       success: false,
+
       message: error.message,
+
     });
+
   }
+
 };
 
 // ================= DELETE APPOINTMENT =================
 
-exports.deleteAppointment =
-async (req, res) => {
+exports.deleteAppointment = async (req, res) => {
 
   try {
 
-    await Appointment.findByIdAndDelete(
+    const appointment = await Appointment.findByIdAndDelete(
       req.params.id
     );
 
+    if (!appointment) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message: "Appointment not found",
+
+      });
+
+    }
+
     res.json({
+
       success: true,
-      message:
-        "Appointment deleted successfully",
+
+      message: "Appointment deleted successfully",
+
     });
 
   } catch (error) {
@@ -332,43 +368,114 @@ async (req, res) => {
     console.log(error);
 
     res.status(500).json({
+
       success: false,
+
       message: error.message,
+
     });
+
   }
+
 };
 
 // ================= START CONSULTATION =================
 
-exports.startConsultation =
-async (req, res) => {
+exports.startConsultation = async (req, res) => {
 
   try {
 
-    const appointment =
-      await Appointment.findByIdAndUpdate(
-        req.params.id,
-        {
-          consultationStatus: "Ready",
-          meetingId: req.params.id,
-        },
-        {
-          new: true,
-        }
-      );
+    const appointment = await Appointment.findByIdAndUpdate(
+
+      req.params.id,
+
+      {
+        consultationStatus: "Ready",
+        meetingId: req.params.id,
+      },
+
+      {
+        new: true,
+      }
+
+    );
+
+    if (!appointment) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message: "Appointment not found",
+
+      });
+
+    }
 
     res.json({
+
       success: true,
-      message:
-        "Consultation started",
+
+      message: "Consultation started",
+
       appointment,
+
     });
 
   } catch (error) {
 
+    console.log(error);
+
     res.status(500).json({
+
       success: false,
+
       message: error.message,
+
     });
+
   }
+
+};
+
+// ================= CHECK READY CONSULTATION =================
+
+exports.checkReadyConsultation = async (req, res) => {
+
+  try {
+
+    const appointment = await Appointment.findOne({
+
+      patientPhone: req.params.patientPhone,
+
+      consultationStatus: "Ready",
+
+    }).sort({
+
+      createdAt: -1,
+
+    });
+
+    res.json({
+
+      success: true,
+
+      appointment,
+
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+
+      success: false,
+
+      message: error.message,
+
+    });
+
+  }
+
 };
