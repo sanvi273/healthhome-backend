@@ -40,6 +40,8 @@ const cartRoutes = require(
 const labOrderRoutes =
 require("./routes/labOrderRoutes");
 
+const prescriptionRoutes =
+require("./routes/prescriptionRoutes");
 
 // ================= APP =================
 
@@ -109,6 +111,11 @@ app.use(
 app.use(
   "/api/lab-orders",
   labOrderRoutes
+);
+
+app.use(
+  "/api/prescriptions",
+  prescriptionRoutes
 );
 
 // ================= TEST ROUTE =================

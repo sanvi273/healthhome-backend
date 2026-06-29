@@ -12,10 +12,15 @@ const {
   updatePaymentStatus,
   deleteAppointment,
   startConsultation,
+  completeConsultation,
+   joinConsultation,
   checkReadyConsultation,
 } = require("../controllers/appointmentController");
 
 console.log({
+  startConsultation,
+  completeConsultation,
+  joinConsultation,
   checkReadyConsultation,
 });
 
@@ -80,9 +85,19 @@ router.put(
   startConsultation
 );
 
+router.put(
+  "/complete/:id",
+  completeConsultation
+);
+
 router.delete(
   "/:id",
   deleteAppointment
+);
+
+router.put(
+  "/join/:id",
+  joinConsultation,
 );
 
 module.exports = router;

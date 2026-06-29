@@ -438,6 +438,39 @@ exports.startConsultation = async (req, res) => {
 
 };
 
+// ================= JOIN CONSULTATION =================
+
+exports.joinConsultation = async (req, res) => {
+  try {
+    const appointment = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      {
+        consultationStatus: "Joined",
+      },
+      {
+        new: true,
+      }
+    );
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      appointment,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 // ================= CHECK READY CONSULTATION =================
 
 exports.checkReadyConsultation = async (req, res) => {
@@ -445,23 +478,15 @@ exports.checkReadyConsultation = async (req, res) => {
   try {
 
     const appointment = await Appointment.findOne({
-
       patientPhone: req.params.patientPhone,
-
       consultationStatus: "Ready",
-
     }).sort({
-
       createdAt: -1,
-
     });
 
     res.json({
-
       success: true,
-
       appointment,
-
     });
 
   } catch (error) {
@@ -469,11 +494,56 @@ exports.checkReadyConsultation = async (req, res) => {
     console.log(error);
 
     res.status(500).json({
-
       success: false,
-
       message: error.message,
+    });
 
+  }
+};
+
+// ================= COMPLETE CONSULTATION =================
+
+exports.completeConsultation = async (req, res) => {
+
+  try {
+
+    const appointment = await Appointment.findByIdAndUpdate(
+
+      req.params.id,
+
+      {
+        status: "Completed",
+        consultationStatus: "Completed",
+      },
+
+      {
+        new: true,
+      }
+
+    );
+
+    if (!appointment) {
+
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+
+    }
+
+    res.json({
+      success: true,
+      message: "Consultation completed successfully",
+      appointment,
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
 
   }
