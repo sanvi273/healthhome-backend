@@ -16,10 +16,15 @@ const appointmentSchema = new mongoose.Schema({
 
   // Doctor
 
-  doctorId: {
-    type: String,
-    default: "",
-  },
+  meetingId: {
+  type: String,
+  default: "",
+},
+
+prescriptionSent: {
+  type: Boolean,
+  default: false,
+},
 
   doctorName: {
     type: String,

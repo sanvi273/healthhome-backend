@@ -1,83 +1,71 @@
 const Cart = require("../models/cartModel");
 
-// ADD TO CART
 
+// Add Medicine
 const addToCart = async (req, res) => {
   try {
-    const {
-      patientPhone,
-      medicineId,
-      medicineName,
-      price,
-    } = req.body;
 
-    const cartItem = new Cart({
-      patientPhone,
-      medicineId,
-      medicineName,
-      price,
-    });
+    const cart = await Cart.create(req.body);
 
-    await cartItem.save();
+    res.json(cart);
 
-    res.status(201).json({
-      success: true,
-      message: "Added To Cart",
-      cartItem,
-    });
-  } catch (error) {
+  } catch (e) {
+
     res.status(500).json({
-      success: false,
-      message: error.message,
+      message: e.toString(),
     });
+
   }
 };
 
-// GET CART
 
-const getCartItems = async (req, res) => {
+// Get Patient Cart
+const getCart = async (req, res) => {
+
   try {
-    const items = await Cart.find({
-      patientPhone: req.params.phone,
+
+    const cart = await Cart.find({
+      patientId: req.params.patientId,
     });
 
-    res.json({
-      success: true,
-      items,
-    });
-  } catch (error) {
+    res.json(cart);
+
+  } catch (e) {
+
     res.status(500).json({
-      success: false,
-      message: error.message,
+      message: e.toString(),
     });
+
   }
+
 };
 
-// DELETE CART ITEM
 
-const deleteCartItem = async (
-  req,
-  res
-) => {
+// Delete Item
+const deleteItem = async (req, res) => {
+
   try {
-    await Cart.findByIdAndDelete(
-      req.params.id
-    );
+
+    await Cart.findByIdAndDelete(req.params.id);
 
     res.json({
-      success: true,
-      message: "Item Removed",
+      message: "Deleted",
     });
-  } catch (error) {
+
+  } catch (e) {
+
     res.status(500).json({
-      success: false,
-      message: error.message,
+      message: e.toString(),
     });
+
   }
+
 };
 
 module.exports = {
+
   addToCart,
-  getCartItems,
-  deleteCartItem,
+  getCart,
+  deleteItem,
+
 };

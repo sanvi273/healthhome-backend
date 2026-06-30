@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const labOrderSchema = new mongoose.Schema({
 
+  patientId: {
+    type: String,
+    required: true,
+  },
+
   patientName: {
     type: String,
     required: true,
@@ -9,17 +14,26 @@ const labOrderSchema = new mongoose.Schema({
 
   patientPhone: {
     type: String,
-    required: true,
+    default: "",
   },
+
+  doctorName: {
+    type: String,
+    default: "",
+  },
+
+  tests: [{
+    type: String,
+  }],
 
   labId: {
     type: String,
-    required: true,
+    default: "",
   },
 
   labName: {
     type: String,
-    required: true,
+    default: "",
   },
 
   address: {

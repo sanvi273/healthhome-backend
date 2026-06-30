@@ -3,33 +3,18 @@ const express = require("express");
 const router = express.Router();
 
 const {
+
   addToCart,
-  getCartItems,
-  deleteCartItem,
-} = require(
-  "../controllers/cartController"
-);
+  getCart,
+  deleteItem,
 
-router.post(
-  "/add",
-  addToCart
-);
+} = require("../controllers/cartController");
 
-router.get("/test", (req, res) => {
-  res.json({
-    success: true,
-    message: "Cart Route Working",
-  });
-});
 
-router.get(
-  "/:phone",
-  getCartItems
-);
+router.post("/add", addToCart);
 
-router.delete(
-  "/:id",
-  deleteCartItem
-);
+router.get("/:patientId", getCart);
+
+router.delete("/:id", deleteItem);
 
 module.exports = router;

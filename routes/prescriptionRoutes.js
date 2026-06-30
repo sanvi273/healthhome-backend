@@ -1,22 +1,42 @@
-const express = require("express");
+console.log("✅ prescriptionRoutes.js loaded");
 
-const router = express.Router();
+const express = require("express");
 
 const {
   savePrescription,
   getPatientPrescriptions,
+  downloadPrescription,
+  sendPrescription,
 } = require("../controllers/prescriptionController");
 
-// Save Prescription
-router.post(
-  "/save",
-  savePrescription
-);
+const router = express.Router();
 
-// Get All Prescriptions of Patient
+router.get("/", (req, res) => {
+  res.send("Prescription Root Working");
+});
+
+router.get("/test", (req, res) => {
+  res.json({
+    success: true,
+    message: "Prescription Test Working",
+  });
+});
+
+router.post("/save", savePrescription);
+
 router.get(
   "/patient/:patientId",
   getPatientPrescriptions
+);
+
+router.get(
+  "/pdf/:id",
+  downloadPrescription
+);
+
+router.put(
+  "/send/:id",
+  sendPrescription
 );
 
 module.exports = router;

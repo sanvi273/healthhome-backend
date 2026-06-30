@@ -2,37 +2,59 @@ const mongoose = require("mongoose");
 
 const cartSchema = new mongoose.Schema(
   {
-    patientPhone: {
+    patientId: {
       type: String,
       required: true,
+    },
+
+    patientName: {
+      type: String,
+      default: "",
     },
 
     medicineId: {
       type: String,
-      required: true,
+      default: "",
     },
 
-    medicineName: {
+    medicine: {
       type: String,
       required: true,
     },
 
-    price: {
+    dose: {
       type: String,
-      required: true,
+      default: "",
+    },
+
+    duration: {
+      type: String,
+      default: "",
+    },
+
+    food: {
+      type: String,
+      default: "",
+    },
+
+    instruction: {
+      type: String,
+      default: "",
     },
 
     quantity: {
       type: Number,
       default: 1,
     },
+
+    status: {
+      type: String,
+      default: "Pending",
+    }
   },
   {
     timestamps: true,
   }
 );
 
-module.exports = mongoose.model(
-  "Cart",
-  cartSchema
-);
+module.exports = mongoose.model("Cart", cartSchema);

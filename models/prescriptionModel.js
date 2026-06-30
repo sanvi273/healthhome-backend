@@ -1,26 +1,20 @@
+console.log("🔥 NEW MODEL LOADED");
+
 const mongoose = require("mongoose");
+
 
 const prescriptionSchema = new mongoose.Schema(
   {
-    appointmentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Appointment",
-      required: true,
-    },
+    appointmentId: String,
 
-    patientId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    doctorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Doctor",
-      required: true,
-    },
+    patientId: ObjectId,
 
     patientName: String,
+
+    patientPhone: String,
+
+    doctorId: ObjectId,
+
     doctorName: String,
 
     diagnosis: String,
@@ -29,11 +23,13 @@ const prescriptionSchema = new mongoose.Schema(
 
     medicines: [
       {
-        medicineName: String,
-        dosage: String,
-        frequency: String,
+        medicineId: String,
+        medicine: String,
+        price: String,
+        dose: String,
         duration: String,
-        instructions: String,
+        food: String,
+        instruction: String,
       },
     ],
 
@@ -41,7 +37,7 @@ const prescriptionSchema = new mongoose.Schema(
 
     advice: String,
 
-    followUpDate: Date,
+    followUpDate: String,
 
     pdfUrl: String,
 

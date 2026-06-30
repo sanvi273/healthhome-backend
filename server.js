@@ -112,12 +112,13 @@ app.use(
   "/api/lab-orders",
   labOrderRoutes
 );
-
+console.log("Mounting prescription routes...");
 app.use(
   "/api/prescriptions",
   prescriptionRoutes
 );
 
+console.log("Prescription routes mounted.");
 // ================= TEST ROUTE =================
 
 app.get("/", (req, res) => {
@@ -161,5 +162,6 @@ app.listen(
       `Server running on port ${PORT}`
     );
   }
+  
 );
 
