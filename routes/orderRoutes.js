@@ -5,22 +5,40 @@ const router = express.Router();
 const {
   placeOrder,
   getPharmacyOrders,
+  getPatientOrders,
   updateOrderStatus,
+  getAllOrders,
 } = require("../controllers/orderController");
 
-// Place Order
+
+// =============================
+// Place Medicine Order
+// =============================
 router.post("/place", placeOrder);
 
-router.get("/test/all", async (req, res) => {
-  const orders = await Order.find();
-  res.json(orders);
-});
 
+// =============================
+// Get All Orders (Admin)
+// =============================
+router.get("/all", getAllOrders);
+
+
+// =============================
 // Pharmacy Orders
+// =============================
 router.get("/pharmacy/:pharmacyId", getPharmacyOrders);
 
-// Update Status
-router.put("/:id/status", updateOrderStatus);
+
+// =============================
+// Patient Orders
+// =============================
+router.get("/patient/:phone", getPatientOrders);
+
+
+// =============================
+// Update Order Status
+// =============================
+router.put("/status/:id", updateOrderStatus);
 
 
 module.exports = router;

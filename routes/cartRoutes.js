@@ -13,7 +13,7 @@ const {
 
 router.post("/add", addToCart);
 
-router.get("/:patientId", getCart);
+router.get("/:patientPhone", getCart);
 
 router.delete("/:id", deleteItem);
 

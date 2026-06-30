@@ -2,10 +2,10 @@ const mongoose = require("mongoose");
 
 const cartSchema = new mongoose.Schema(
   {
-    patientId: {
-      type: String,
-      required: true,
-    },
+    patientPhone:{
+type:String,
+required:true
+},
 
     patientName: {
       type: String,
