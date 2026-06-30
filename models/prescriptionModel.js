@@ -2,18 +2,17 @@ console.log("🔥 NEW MODEL LOADED");
 
 const mongoose = require("mongoose");
 
-
 const prescriptionSchema = new mongoose.Schema(
   {
     appointmentId: String,
 
-    patientId: ObjectId,
+    patientId: String,
 
     patientName: String,
 
     patientPhone: String,
 
-    doctorId: ObjectId,
+    doctorId: String,
 
     doctorName: String,
 
