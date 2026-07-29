@@ -62,6 +62,26 @@ console.log("Mounting payment routes...");
 app.use("/api/payment", paymentRoutes);
 console.log("Payment routes mounted.");
 
+
+console.log("=== Registered Routes ===");
+
+app._router.stack.forEach((middleware) => {
+  if (middleware.route) {
+    console.log(
+      Object.keys(middleware.route.methods).join(",").toUpperCase(),
+      middleware.route.path
+    );
+  } else if (middleware.name === "router") {
+    middleware.handle.stack.forEach((handler) => {
+      if (handler.route) {
+        console.log(
+          Object.keys(handler.route.methods).join(",").toUpperCase(),
+          handler.route.path
+        );
+      }
+    });
+  }
+});
 // ================= TEST ROUTE =================
 
 app.get("/", (req, res) => {
