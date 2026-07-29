@@ -38,4 +38,14 @@ router.delete("/:id", deleteItem);
 // Keep this LAST
 router.get("/:patientPhone", getCart);
 
+console.log("=== CART ROUTES ===");
+
+router.stack.forEach((layer) => {
+  if (layer.route) {
+    console.log(
+      Object.keys(layer.route.methods).join(",").toUpperCase(),
+      layer.route.path
+    );
+  }
+});
 module.exports = router;
