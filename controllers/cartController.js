@@ -112,12 +112,10 @@ const deleteItem = async (req, res) => {
 // =========================
 const increaseQuantity = async (req, res) => {
   try {
-    console.log("===== INCREASE API =====");
+    console.log("===== INCREASE =====");
     console.log("ID =", req.params.id);
 
     const cart = await Cart.findById(req.params.id);
-
-    console.log("CART =", cart);
 
     if (!cart) {
       return res.status(404).json({
@@ -126,32 +124,34 @@ const increaseQuantity = async (req, res) => {
       });
     }
 
-    cart.quantity += 1;
-    cart.subtotal = cart.quantity * cart.price;
+    cart.quantity = Number(cart.quantity) + 1;
+    cart.subtotal = Number(cart.quantity) * Number(cart.price);
 
     await cart.save();
 
     console.log("UPDATED =", cart);
 
-    res.json({
+    return res.status(200).json({
       success: true,
       cart,
     });
-  } catch (e) {
-    console.log("INCREASE ERROR =", e);
+  } catch (err) {
+    console.log(err);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: e.toString(),
+      message: err.message,
     });
   }
 };
-
 // =========================
 // Decrease Quantity
 // =========================
 const decreaseQuantity = async (req, res) => {
   try {
+    console.log("===== DECREASE =====");
+    console.log("ID =", req.params.id);
+
     const cart = await Cart.findById(req.params.id);
 
     if (!cart) {
@@ -162,20 +162,23 @@ const decreaseQuantity = async (req, res) => {
     }
 
     if (cart.quantity > 1) {
-      cart.quantity -= 1;
-      cart.subtotal = cart.quantity * cart.price;
+      cart.quantity = Number(cart.quantity) - 1;
+      cart.subtotal = Number(cart.quantity) * Number(cart.price);
       await cart.save();
     }
 
-    res.json({
+    console.log("UPDATED =", cart);
+
+    return res.status(200).json({
       success: true,
       cart,
     });
+  } catch (err) {
+    console.log(err);
 
-  } catch (e) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: e.toString(),
+      message: err.message,
     });
   }
 };
@@ -189,7 +192,7 @@ const clearCart = async (req, res) => {
       patientPhone: req.params.patientPhone,
     });
 
-    res.json({
+    return res.status(200).json({
       success: true,
       message: "Cart cleared successfully",
     });
