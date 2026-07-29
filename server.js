@@ -49,6 +49,9 @@ app.use("/api/orders", orderRoutes);
 
 app.use("/api/cart", cartRoutes);
 
+console.log("Cart Routes Loaded Successfully");
+console.log(cartRoutes);
+
 app.use("/api/lab-orders", labOrderRoutes);
 
 console.log("Mounting prescription routes...");

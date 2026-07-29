@@ -107,8 +107,106 @@ const deleteItem = async (req, res) => {
   }
 };
 
+// =========================
+// Increase Quantity
+// =========================
+const increaseQuantity = async (req, res) => {
+  try {
+    console.log("===== INCREASE API =====");
+    console.log("ID =", req.params.id);
+
+    const cart = await Cart.findById(req.params.id);
+
+    console.log("CART =", cart);
+
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart item not found",
+      });
+    }
+
+    cart.quantity += 1;
+    cart.subtotal = cart.quantity * cart.price;
+
+    await cart.save();
+
+    console.log("UPDATED =", cart);
+
+    res.json({
+      success: true,
+      cart,
+    });
+  } catch (e) {
+    console.log("INCREASE ERROR =", e);
+
+    res.status(500).json({
+      success: false,
+      message: e.toString(),
+    });
+  }
+};
+
+// =========================
+// Decrease Quantity
+// =========================
+const decreaseQuantity = async (req, res) => {
+  try {
+    const cart = await Cart.findById(req.params.id);
+
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart item not found",
+      });
+    }
+
+    if (cart.quantity > 1) {
+      cart.quantity -= 1;
+      cart.subtotal = cart.quantity * cart.price;
+      await cart.save();
+    }
+
+    res.json({
+      success: true,
+      cart,
+    });
+
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: e.toString(),
+    });
+  }
+};
+
+// =========================
+// Clear Patient Cart
+// =========================
+const clearCart = async (req, res) => {
+  try {
+    await Cart.deleteMany({
+      patientPhone: req.params.patientPhone,
+    });
+
+    res.json({
+      success: true,
+      message: "Cart cleared successfully",
+    });
+
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: e.toString(),
+    });
+  }
+};
+
 module.exports = {
   addToCart,
   getCart,
   deleteItem,
+  increaseQuantity,
+  decreaseQuantity,
+  clearCart,
 };
