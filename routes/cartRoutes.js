@@ -12,6 +12,14 @@ const {
   clearCart,
 } = require("../controllers/cartController");
 
+// ADD THIS
+router.get("/test", (req, res) => {
+  res.json({
+    success: true,
+    message: "Cart routes are working",
+  });
+});
+
 // Add medicine
 router.post("/add", addToCart);
 
@@ -27,7 +35,7 @@ router.delete("/clear/:patientPhone", clearCart);
 // Delete one cart item
 router.delete("/:id", deleteItem);
 
-// Get patient's cart
+// Keep this LAST
 router.get("/:patientPhone", getCart);
 
 module.exports = router;
