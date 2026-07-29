@@ -63,7 +63,9 @@ const addToCart = async (req, res) => {
 // =========================
 const getCart = async (req, res) => {
   try {
-    const items = await Cart.find();
+    const items = await Cart.find({
+  patientPhone: req.params.patientPhone,
+});
 
     console.log("TOTAL CART ITEMS =", items.length);
     console.log(items);
