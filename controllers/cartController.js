@@ -1,4 +1,5 @@
 const Cart = require("../models/cartModel");
+const Medicine = require("../models/medicine");
 
 // =========================
 // Add Medicine To Cart
@@ -8,7 +9,36 @@ const addToCart = async (req, res) => {
     console.log("========== ADD TO CART ==========");
     console.log(req.body);
 
-    const cart = await Cart.create(req.body);
+    // Find medicine from medicine collection
+    const medicine = await Medicine.findById(req.body.medicineId);
+
+    if (!medicine) {
+      return res.status(404).json({
+        success: false,
+        message: "Medicine not found",
+      });
+    }
+
+    const quantity = req.body.quantity || 1;
+    const price = medicine.price;
+    const subtotal = quantity * price;
+
+    const cart = await Cart.create({
+      patientPhone: req.body.patientPhone,
+      patientName: req.body.patientName,
+
+      medicineId: medicine._id,
+      medicine: medicine.medicineName,
+
+      dose: req.body.dose,
+      duration: req.body.duration,
+      food: req.body.food,
+      instruction: req.body.instruction,
+
+      quantity: quantity,
+      price: price,
+      subtotal: subtotal,
+    });
 
     console.log("SAVED CART =", cart);
 
@@ -33,22 +63,21 @@ const addToCart = async (req, res) => {
 // =========================
 const getCart = async (req, res) => {
   try {
-    console.log("PATIENT ID =", req.params.patientPhone);
+    const items = await Cart.find();
 
-    const items = await Cart.find({
-      patientId: req.params.patientPhone,
-    });
+    console.log("TOTAL CART ITEMS =", items.length);
+    console.log(items);
 
-    console.log("FOUND ITEMS =", items);
-
-    res.json({
+    res.status(200).json({
+      success: true,
       items,
     });
 
   } catch (e) {
-    console.log(e);
+    console.log("GET CART ERROR =", e);
 
     res.status(500).json({
+      success: false,
       message: e.toString(),
     });
   }
@@ -65,6 +94,7 @@ const deleteItem = async (req, res) => {
       success: true,
       message: "Cart item deleted successfully",
     });
+
   } catch (e) {
     console.error("DELETE CART ERROR:", e);
 

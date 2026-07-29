@@ -47,6 +47,17 @@ required:true
       default: 1,
     },
 
+
+price: {
+  type: Number,
+  default: 0,
+},
+
+subtotal: {
+  type: Number,
+  default: 0,
+},
+
     status: {
       type: String,
       default: "Pending",
