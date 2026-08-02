@@ -3,22 +3,62 @@ const uploadToCloudinary = require("../utils/cloudinaryUpload");
 // ================= BOOK APPOINTMENT =================
 exports.bookAppointment = async (req, res) => {
   try {
-    console.log("========== APPOINTMENT ==========");
-    console.log("CONTENT TYPE:", req.headers["content-type"]);
-    console.log("BODY:", req.body);
-    console.log("FILES:", req.files);
-    console.log("================================");
+    console.log("BODY =", req.body);
+    console.log("FILES =", req.files);
 
-    return res.json({
-      body: req.body,
-      files: req.files,
+    const uploadedReports = [];
+
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const result = await uploadToCloudinary(
+          file,
+          "appointment_reports"
+        );
+
+        uploadedReports.push(result.secure_url);
+      }
+    }
+
+    const appointment = await Appointment.create({
+      patientName: req.body.patientName,
+      patientPhone: req.body.patientPhone,
+
+      doctorId: req.body.doctorId || "",
+
+      doctorName: req.body.doctorName,
+
+      specialization: req.body.specialization || "",
+
+      hospital: req.body.hospital || "",
+
+      fees: Number(req.body.fees || 0),
+
+      appointmentDate: req.body.appointmentDate,
+
+      appointmentTime: req.body.appointmentTime,
+
+      reports: uploadedReports,
+
+      paymentStatus: req.body.paymentStatus || "Pending",
+
+      status: "Pending",
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Appointment booked successfully",
+      appointment,
     });
 
   } catch (error) {
     console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
-
 // ================= GET ALL APPOINTMENTS =================
 
 exports.getAppointments = async (req, res) => {
