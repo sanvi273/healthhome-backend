@@ -15,7 +15,11 @@ exports.bookAppointment = async (req, res) => {
           "appointment_reports"
         );
 
-        uploadedReports.push(result.secure_url);
+        uploadedReports.push({
+  fileName: file.originalname,
+  fileUrl: result.secure_url,
+  fileType: file.mimetype,
+});
       }
     }
 
