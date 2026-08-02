@@ -1,3 +1,4 @@
+const upload = require("../middleware/upload");
 const express = require("express");
 
 const router = express.Router();
@@ -28,6 +29,7 @@ console.log({
 
 router.post(
   "/book",
+  upload.array("reports"),
   bookAppointment
 );
 

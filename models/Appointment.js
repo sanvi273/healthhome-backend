@@ -1,109 +1,109 @@
 const mongoose = require("mongoose");
 
-const appointmentSchema = new mongoose.Schema({
+const appointmentSchema = new mongoose.Schema(
+  {
+    // ================= Patient =================
 
-  // Patient
+    patientName: {
+      type: String,
+      required: true,
+    },
 
-  patientName: {
-    type: String,
-    required: true,
+    patientPhone: {
+      type: String,
+      required: true,
+    },
+
+    // ================= Doctor =================
+
+    doctorName: {
+      type: String,
+      required: true,
+    },
+
+    specialization: {
+      type: String,
+      default: "",
+    },
+
+    hospital: {
+      type: String,
+      default: "",
+    },
+
+    fees: {
+      type: Number,
+      default: 0,
+    },
+
+    // ================= Appointment =================
+
+    appointmentDate: {
+      type: String,
+      required: true,
+    },
+
+    appointmentTime: {
+      type: String,
+      required: true,
+    },
+
+    // ================= Uploaded Reports =================
+
+    reports: [
+      {
+        fileName: {
+          type: String,
+          default: "",
+        },
+
+        fileUrl: {
+          type: String,
+          default: "",
+        },
+
+        fileType: {
+          type: String,
+          default: "",
+        },
+      },
+    ],
+
+    // ================= Video Consultation =================
+
+    meetingId: {
+      type: String,
+      default: "",
+    },
+
+    consultationStatus: {
+      type: String,
+      default: "Pending",
+    },
+
+    prescriptionSent: {
+      type: Boolean,
+      default: false,
+    },
+
+    // ================= Payment =================
+
+    paymentStatus: {
+      type: String,
+      default: "Pending",
+    },
+
+    // ================= Appointment Status =================
+
+    status: {
+      type: String,
+      default: "Pending",
+    },
   },
-
-  patientPhone: {
-    type: String,
-    required: true,
-  },
-
-  // Doctor
-
-  meetingId: {
-  type: String,
-  default: "",
-},
-
-prescriptionSent: {
-  type: Boolean,
-  default: false,
-},
-
-  doctorName: {
-    type: String,
-    required: true,
-  },
-
-  specialization: {
-    type: String,
-    default: "",
-  },
-
-  hospital: {
-    type: String,
-    default: "",
-  },
-
-  fees: {
-    type: Number,
-    default: 0,
-  },
-
-  // Appointment
-
-  appointmentDate: {
-    type: String,
-    required: true,
-  },
-
-  appointmentTime: {
-    type: String,
-    required: true,
-  },
-
-  // Patient Details
-
-  reason: {
-    type: String,
-    default: "",
-  },
-
-  symptoms: {
-    type: String,
-    default: "",
-  },
-
-  medicines: {
-    type: String,
-    default: "",
-  },
-
-  reports: [{
-    type: String,
-  }],
-
-  // Status
-
-  status: {
-    type: String,
-    default: "Pending",
-  },
-
-  paymentStatus: {
-  type: String,
-  default: "Pending",
-},
-
-consultationStatus: {
-  type: String,
-  default: "Pending",
-},
-
-meetingId: {
-  type: String,
-  default: "",
-},
-
-}, {
-  timestamps: true,
-});
+  {
+    timestamps: true,
+  }
+);
 
 module.exports = mongoose.model(
   "Appointment",
