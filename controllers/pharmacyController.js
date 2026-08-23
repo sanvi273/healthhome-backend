@@ -13,6 +13,9 @@ const addPharmacy = async (req, res) => {
         phone: req.body.phone,
       });
 
+
+    // ================= UPDATE =================
+
     if (existingPharmacy) {
 
       existingPharmacy.name =
@@ -27,13 +30,8 @@ const addPharmacy = async (req, res) => {
       existingPharmacy.address =
         req.body.address;
 
-      // If city is provided, update it too
-      if (req.body.city !== undefined) {
-        existingPharmacy.city =
-          req.body.city;
-      }
-
       await existingPharmacy.save();
+
 
       return res.status(200).json({
 
@@ -42,14 +40,35 @@ const addPharmacy = async (req, res) => {
         message:
           "Pharmacy updated successfully",
 
-        pharmacy: existingPharmacy,
+        pharmacy:
+          existingPharmacy,
       });
     }
 
-    const pharmacy =
-      await Pharmacy.create(req.body);
 
-    res.status(201).json({
+    // ================= CREATE =================
+
+    const pharmacy =
+      await Pharmacy.create({
+
+        name:
+          req.body.name,
+
+        shopType:
+          req.body.shopType,
+
+        experience:
+          req.body.experience,
+
+        address:
+          req.body.address,
+
+        phone:
+          req.body.phone,
+      });
+
+
+    return res.status(201).json({
 
       success: true,
 
@@ -59,13 +78,20 @@ const addPharmacy = async (req, res) => {
       pharmacy,
     });
 
+
   } catch (error) {
 
-    res.status(500).json({
+    console.error(
+      "ADD PHARMACY ERROR:",
+      error
+    );
+
+    return res.status(500).json({
 
       success: false,
 
-      message: error.message,
+      message:
+        error.message,
     });
   }
 };
@@ -93,22 +119,28 @@ const getPharmacies = async (req, res) => {
 
       success: false,
 
-      message: error.message,
+      message:
+        error.message,
     });
   }
 };
 
 
-// ================= GET PHARMACY PROFILE BY PHONE =================
+// ================= GET SINGLE PHARMACY =================
 
-const getPharmacyProfile = async (req, res) => {
+const getPharmacyProfile = async (
+  req,
+  res
+) => {
 
   try {
 
     const pharmacy =
       await Pharmacy.findOne({
-        phone: req.params.phone,
+        phone:
+          req.params.phone,
       });
+
 
     if (!pharmacy) {
 
@@ -121,11 +153,13 @@ const getPharmacyProfile = async (req, res) => {
       });
     }
 
+
     return res.status(200).json({
 
       success: true,
 
-      pharmacy,
+      pharmacy:
+        pharmacy,
     });
 
   } catch (error) {
@@ -134,17 +168,18 @@ const getPharmacyProfile = async (req, res) => {
 
       success: false,
 
-      message: error.message,
+      message:
+        error.message,
     });
   }
 };
 
 
-// ================= EXPORT =================
-
 module.exports = {
 
   addPharmacy,
+
   getPharmacies,
+
   getPharmacyProfile,
 };
