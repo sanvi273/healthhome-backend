@@ -44,11 +44,6 @@ new mongoose.Schema({
     default: "",
   },
 
-  city: {
-  type: String,
-  required: true,
-},
-
 }, {
   timestamps: true,
 });
