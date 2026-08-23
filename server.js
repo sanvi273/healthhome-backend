@@ -17,6 +17,7 @@ const medicineRoutes = require("./routes/medicineRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const labOrderRoutes = require("./routes/labOrderRoutes");
+const sampleCollectorRoutes = require("./routes/sampleCollectorRoutes");
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 
@@ -54,6 +55,11 @@ console.log("Cart Routes Loaded Successfully");
 console.log(cartRoutes);
 
 app.use("/api/lab-orders", labOrderRoutes);
+
+app.use(
+  "/api/sample-collectors",
+  sampleCollectorRoutes
+);
 
 console.log("Mounting prescription routes...");
 app.use("/api/prescriptions", prescriptionRoutes);

@@ -1,4 +1,5 @@
 const LabOrder = require("../models/labOrder");
+const SampleCollector = require("../models/sampleCollector");
 
 // ============================================================
 // ADD LAB ORDER
@@ -20,9 +21,9 @@ const addLabOrder = async (req, res) => {
       collectionMode,
     } = req.body;
 
-    // ------------------------------------------
-    // BASIC VALIDATION
-    // ------------------------------------------
+    // --------------------------------------------------------
+    // VALIDATION
+    // --------------------------------------------------------
 
     if (!patientId || !patientName) {
       return res.status(400).json({
@@ -38,18 +39,18 @@ const addLabOrder = async (req, res) => {
       });
     }
 
-    // ------------------------------------------
+    // --------------------------------------------------------
     // COLLECTION MODE
-    // ------------------------------------------
+    // --------------------------------------------------------
 
     const finalCollectionMode =
       collectionMode === "Visit Laboratory"
         ? "Visit Laboratory"
         : "Home Collection";
 
-    // ------------------------------------------
+    // --------------------------------------------------------
     // CREATE ORDER
-    // ------------------------------------------
+    // --------------------------------------------------------
 
     const order = await LabOrder.create({
       patientId,
@@ -75,7 +76,6 @@ const addLabOrder = async (req, res) => {
 
       status: "Pending",
 
-      // Collector starts empty
       collectorId: "",
       collectorName: "",
       collectorPhone: "",
@@ -86,7 +86,7 @@ const addLabOrder = async (req, res) => {
     });
 
     console.log("================================");
-    console.log("NEW LAB ORDER CREATED");
+    console.log("NEW LAB ORDER");
     console.log("ORDER ID =", order._id);
     console.log("PATIENT =", order.patientName);
     console.log("LAB =", order.labName);
@@ -104,7 +104,6 @@ const addLabOrder = async (req, res) => {
     });
 
   } catch (error) {
-
     console.error(
       "ADD LAB ORDER ERROR:",
       error
@@ -124,12 +123,11 @@ const addLabOrder = async (req, res) => {
 
 const getLabOrders = async (req, res) => {
   try {
-
-    const orders =
-      await LabOrder.find()
-        .sort({
-          createdAt: -1,
-        });
+    const orders = await LabOrder
+      .find()
+      .sort({
+        createdAt: -1,
+      });
 
     return res.status(200).json({
       success: true,
@@ -137,7 +135,6 @@ const getLabOrders = async (req, res) => {
     });
 
   } catch (error) {
-
     console.error(
       "GET LAB ORDERS ERROR:",
       error
@@ -157,7 +154,6 @@ const getLabOrders = async (req, res) => {
 
 const getLabOrderById = async (req, res) => {
   try {
-
     const order =
       await LabOrder.findById(
         req.params.id
@@ -176,9 +172,8 @@ const getLabOrderById = async (req, res) => {
     });
 
   } catch (error) {
-
     console.error(
-      "GET LAB ORDER ERROR:",
+      "GET SINGLE LAB ORDER ERROR:",
       error
     );
 
@@ -191,84 +186,11 @@ const getLabOrderById = async (req, res) => {
 
 
 // ============================================================
-// UPDATE STATUS
+// ACCEPT LAB BOOKING
 // ============================================================
 
-const updateLabOrderStatus = async (
-  req,
-  res
-) => {
-
+const acceptLabOrder = async (req, res) => {
   try {
-
-    const {
-      status,
-    } = req.body;
-
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: "Status is required",
-      });
-    }
-
-    const order =
-      await LabOrder.findByIdAndUpdate(
-        req.params.id,
-
-        {
-          status: status,
-        },
-
-        {
-          new: true,
-          runValidators: true,
-        }
-      );
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Lab order not found",
-      });
-    }
-
-    console.log(
-      `LAB ORDER ${order._id} STATUS → ${status}`
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: "Lab order status updated",
-      order,
-    });
-
-  } catch (error) {
-
-    console.error(
-      "UPDATE LAB STATUS ERROR:",
-      error
-    );
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-
-// ============================================================
-// ACCEPT LAB ORDER
-// ============================================================
-
-const acceptLabOrder = async (
-  req,
-  res
-) => {
-
-  try {
-
     const order =
       await LabOrder.findById(
         req.params.id
@@ -285,18 +207,13 @@ const acceptLabOrder = async (
       return res.status(400).json({
         success: false,
         message:
-          `Order cannot be accepted because current status is ${order.status}`,
+          `Order is already ${order.status}`,
       });
     }
 
     order.status = "Accepted";
 
     await order.save();
-
-    console.log(
-      "LAB ORDER ACCEPTED:",
-      order._id
-    );
 
     return res.status(200).json({
       success: true,
@@ -305,7 +222,6 @@ const acceptLabOrder = async (
     });
 
   } catch (error) {
-
     console.error(
       "ACCEPT LAB ORDER ERROR:",
       error
@@ -320,29 +236,14 @@ const acceptLabOrder = async (
 
 
 // ============================================================
-// REJECT LAB ORDER
+// REJECT LAB BOOKING
 // ============================================================
 
-const rejectLabOrder = async (
-  req,
-  res
-) => {
-
+const rejectLabOrder = async (req, res) => {
   try {
-
     const order =
-      await LabOrder.findByIdAndUpdate(
-
-        req.params.id,
-
-        {
-          status: "Rejected",
-        },
-
-        {
-          new: true,
-          runValidators: true,
-        }
+      await LabOrder.findById(
+        req.params.id
       );
 
     if (!order) {
@@ -352,6 +253,10 @@ const rejectLabOrder = async (
       });
     }
 
+    order.status = "Rejected";
+
+    await order.save();
+
     return res.status(200).json({
       success: true,
       message: "Lab booking rejected",
@@ -359,7 +264,6 @@ const rejectLabOrder = async (
     });
 
   } catch (error) {
-
     console.error(
       "REJECT LAB ORDER ERROR:",
       error
@@ -381,24 +285,22 @@ const assignSampleCollector = async (
   req,
   res
 ) => {
-
   try {
-
     const {
       collectorId,
-      collectorName,
-      collectorPhone,
     } = req.body;
 
-    if (!collectorId ||
-        !collectorName) {
-
+    if (!collectorId) {
       return res.status(400).json({
         success: false,
         message:
-          "Collector ID and name are required",
+          "Collector ID is required",
       });
     }
+
+    // --------------------------------------------------------
+    // FIND ORDER
+    // --------------------------------------------------------
 
     const order =
       await LabOrder.findById(
@@ -408,45 +310,96 @@ const assignSampleCollector = async (
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Lab order not found",
+        message:
+          "Lab order not found",
       });
     }
 
-    // Collector is only needed
-    // for Home Collection
+    // --------------------------------------------------------
+    // HOME COLLECTION ONLY
+    // --------------------------------------------------------
 
     if (
       order.collectionMode !==
       "Home Collection"
     ) {
-
       return res.status(400).json({
         success: false,
         message:
-          "Sample collector is only required for Home Collection",
+          "Sample collector is required only for Home Collection",
       });
     }
+
+    // --------------------------------------------------------
+    // ORDER MUST BE ACCEPTED
+    // --------------------------------------------------------
+
+    if (order.status !== "Accepted") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Booking must be accepted before assigning collector",
+      });
+    }
+
+    // --------------------------------------------------------
+    // FIND COLLECTOR
+    // --------------------------------------------------------
+
+    const collector =
+      await SampleCollector.findById(
+        collectorId
+      );
+
+    if (!collector) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Sample collector not found",
+      });
+    }
+
+    // --------------------------------------------------------
+    // COLLECTOR ACTIVE?
+    // --------------------------------------------------------
 
     if (
-      order.status !== "Accepted" &&
-      order.status !== "Collector Assigned"
+      collector.status !== "Active"
     ) {
-
       return res.status(400).json({
         success: false,
         message:
-          `Collector cannot be assigned when order status is ${order.status}`,
+          "This collector is inactive",
       });
     }
 
+    // --------------------------------------------------------
+    // COLLECTOR AVAILABLE?
+    // --------------------------------------------------------
+
+    if (
+      collector.availability !==
+      "Available"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This collector is currently busy",
+      });
+    }
+
+    // --------------------------------------------------------
+    // ASSIGN COLLECTOR TO ORDER
+    // --------------------------------------------------------
+
     order.collectorId =
-      collectorId;
+      collector._id.toString();
 
     order.collectorName =
-      collectorName;
+      collector.name;
 
     order.collectorPhone =
-      collectorPhone || "";
+      collector.phone;
 
     order.collectorStatus =
       "Assigned";
@@ -456,28 +409,24 @@ const assignSampleCollector = async (
 
     await order.save();
 
-    console.log("================================");
-    console.log("COLLECTOR ASSIGNED");
-    console.log("ORDER =", order._id);
-    console.log(
-      "COLLECTOR =",
-      order.collectorName
-    );
-    console.log(
-      "PHONE =",
-      order.collectorPhone
-    );
-    console.log("================================");
+    // --------------------------------------------------------
+    // COLLECTOR BECOMES BUSY
+    // --------------------------------------------------------
+
+    collector.availability =
+      "Busy";
+
+    await collector.save();
 
     return res.status(200).json({
       success: true,
       message:
         "Sample collector assigned successfully",
       order,
+      collector,
     });
 
   } catch (error) {
-
     console.error(
       "ASSIGN COLLECTOR ERROR:",
       error
@@ -499,9 +448,7 @@ const collectorOnTheWay = async (
   req,
   res
 ) => {
-
   try {
-
     const order =
       await LabOrder.findById(
         req.params.id
@@ -510,19 +457,8 @@ const collectorOnTheWay = async (
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Lab order not found",
-      });
-    }
-
-    if (
-      order.collectionMode !==
-      "Home Collection"
-    ) {
-
-      return res.status(400).json({
-        success: false,
         message:
-          "This order is not a Home Collection order",
+          "Lab order not found",
       });
     }
 
@@ -530,7 +466,6 @@ const collectorOnTheWay = async (
       order.status !==
       "Collector Assigned"
     ) {
-
       return res.status(400).json({
         success: false,
         message:
@@ -538,10 +473,10 @@ const collectorOnTheWay = async (
       });
     }
 
-    order.collectorStatus =
+    order.status =
       "On The Way";
 
-    order.status =
+    order.collectorStatus =
       "On The Way";
 
     await order.save();
@@ -554,7 +489,6 @@ const collectorOnTheWay = async (
     });
 
   } catch (error) {
-
     console.error(
       "COLLECTOR ON WAY ERROR:",
       error
@@ -576,9 +510,7 @@ const markSampleCollected = async (
   req,
   res
 ) => {
-
   try {
-
     const order =
       await LabOrder.findById(
         req.params.id
@@ -587,39 +519,52 @@ const markSampleCollected = async (
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Lab order not found",
+        message:
+          "Lab order not found",
       });
     }
 
     if (
-      order.collectionMode !==
-      "Home Collection"
+      order.status !==
+      "On The Way"
     ) {
-
       return res.status(400).json({
         success: false,
         message:
-          "This order is not a Home Collection order",
+          "Collector must be on the way before sample collection",
       });
     }
-
-    order.collectorStatus =
-      "Sample Collected";
 
     order.status =
       "Sample Collected";
 
+    order.collectorStatus =
+      "Sample Collected";
+
     await order.save();
+
+    // --------------------------------------------------------
+    // COLLECTOR AVAILABLE AGAIN
+    // --------------------------------------------------------
+
+    if (order.collectorId) {
+      await SampleCollector.findByIdAndUpdate(
+        order.collectorId,
+        {
+          availability:
+            "Available",
+        }
+      );
+    }
 
     return res.status(200).json({
       success: true,
       message:
-        "Sample marked as collected",
+        "Sample collected successfully",
       order,
     });
 
   } catch (error) {
-
     console.error(
       "SAMPLE COLLECTED ERROR:",
       error
@@ -635,19 +580,13 @@ const markSampleCollected = async (
 
 // ============================================================
 // SAMPLE RECEIVED AT LAB
-//
-// Used for:
-// 1. Home Collection
-// 2. Visit Laboratory
 // ============================================================
 
 const markSampleReceived = async (
   req,
   res
 ) => {
-
   try {
-
     const order =
       await LabOrder.findById(
         req.params.id
@@ -656,40 +595,47 @@ const markSampleReceived = async (
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Lab order not found",
+        message:
+          "Lab order not found",
       });
     }
+
+    // --------------------------------------------------------
+    // HOME COLLECTION
+    // --------------------------------------------------------
 
     if (
       order.collectionMode ===
       "Home Collection"
     ) {
-
       if (
         order.status !==
         "Sample Collected"
       ) {
-
         return res.status(400).json({
           success: false,
           message:
-            "Sample must be collected before receiving it",
+            "Sample must be collected before receiving it at the laboratory",
         });
       }
+    }
 
-    } else {
+    // --------------------------------------------------------
+    // VISIT LABORATORY
+    // --------------------------------------------------------
 
-      // Visit Laboratory
-      // patient physically brings sample
-
+    if (
+      order.collectionMode ===
+      "Visit Laboratory"
+    ) {
       if (
-        order.status !== "Accepted"
+        order.status !==
+        "Accepted"
       ) {
-
         return res.status(400).json({
           success: false,
           message:
-            "Patient must have an accepted booking before sample can be received",
+            "Booking must be accepted before receiving the sample",
         });
       }
     }
@@ -707,7 +653,6 @@ const markSampleReceived = async (
     });
 
   } catch (error) {
-
     console.error(
       "SAMPLE RECEIVED ERROR:",
       error
@@ -729,9 +674,7 @@ const startTesting = async (
   req,
   res
 ) => {
-
   try {
-
     const order =
       await LabOrder.findById(
         req.params.id
@@ -740,7 +683,8 @@ const startTesting = async (
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Lab order not found",
+        message:
+          "Lab order not found",
       });
     }
 
@@ -748,7 +692,6 @@ const startTesting = async (
       order.status !==
       "Sample Received"
     ) {
-
       return res.status(400).json({
         success: false,
         message:
@@ -769,9 +712,92 @@ const startTesting = async (
     });
 
   } catch (error) {
-
     console.error(
       "START TESTING ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+// ============================================================
+// GENERAL STATUS UPDATE
+// ============================================================
+
+const updateLabOrderStatus = async (
+  req,
+  res
+) => {
+  try {
+    const {
+      status,
+    } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Status is required",
+      });
+    }
+
+    const order =
+      await LabOrder.findById(
+        req.params.id
+      );
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Lab order not found",
+      });
+    }
+
+    order.status = status;
+
+    // Keep collectorStatus synchronized
+    if (
+      status ===
+      "Collector Assigned"
+    ) {
+      order.collectorStatus =
+        "Assigned";
+    }
+
+    if (
+      status ===
+      "On The Way"
+    ) {
+      order.collectorStatus =
+        "On The Way";
+    }
+
+    if (
+      status ===
+      "Sample Collected"
+    ) {
+      order.collectorStatus =
+        "Sample Collected";
+    }
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Lab order status updated",
+      order,
+    });
+
+  } catch (error) {
+    console.error(
+      "UPDATE STATUS ERROR:",
       error
     );
 
@@ -791,15 +817,12 @@ const uploadReport = async (
   req,
   res
 ) => {
-
   try {
-
     const {
       reportUrl,
     } = req.body;
 
     if (!reportUrl) {
-
       return res.status(400).json({
         success: false,
         message:
@@ -813,11 +836,21 @@ const uploadReport = async (
       );
 
     if (!order) {
-
       return res.status(404).json({
         success: false,
         message:
           "Lab order not found",
+      });
+    }
+
+    if (
+      order.status !==
+      "In Progress"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Testing must be in progress before uploading report",
       });
     }
 
@@ -832,13 +865,6 @@ const uploadReport = async (
 
     await order.save();
 
-    console.log("================================");
-    console.log("LAB REPORT UPLOADED");
-    console.log("ORDER =", order._id);
-    console.log("REPORT =", order.reportUrl);
-    console.log("STATUS =", order.status);
-    console.log("================================");
-
     return res.status(200).json({
       success: true,
       message:
@@ -847,7 +873,6 @@ const uploadReport = async (
     });
 
   } catch (error) {
-
     console.error(
       "UPLOAD REPORT ERROR:",
       error
@@ -862,32 +887,20 @@ const uploadReport = async (
 
 
 // ============================================================
-// EXPORT
+// EXPORTS
 // ============================================================
 
 module.exports = {
-
   addLabOrder,
-
   getLabOrders,
-
   getLabOrderById,
-
-  updateLabOrderStatus,
-
   acceptLabOrder,
-
   rejectLabOrder,
-
   assignSampleCollector,
-
   collectorOnTheWay,
-
   markSampleCollected,
-
   markSampleReceived,
-
   startTesting,
-
+  updateLabOrderStatus,
   uploadReport,
 };
