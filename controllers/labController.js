@@ -1,5 +1,4 @@
-const Lab =
-require("../models/lab");
+const Lab = require("../models/lab");
 
 
 // ================= ADD LAB =================
@@ -72,7 +71,7 @@ const getLabs = async (req, res) => {
   try {
 
     const labs =
-    await Lab.find();
+      await Lab.find();
 
     res.status(200).json({
 
@@ -92,8 +91,53 @@ const getLabs = async (req, res) => {
   }
 };
 
+
+// ================= GET LAB PROFILE BY PHONE =================
+
+const getLabProfile = async (req, res) => {
+
+  try {
+
+    const lab =
+      await Lab.findOne({
+        phone: req.params.phone,
+      });
+
+    if (!lab) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message:
+          "Lab profile not found",
+      });
+    }
+
+    return res.status(200).json({
+
+      success: true,
+
+      lab,
+    });
+
+  } catch (error) {
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: error.message,
+    });
+  }
+};
+
+
+// ================= EXPORT =================
+
 module.exports = {
 
   addLab,
   getLabs,
+  getLabProfile,
 };

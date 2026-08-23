@@ -1,36 +1,43 @@
 const express = require("express");
 
-const router =
-express.Router();
+const router = express.Router();
 
 const {
   addPharmacy,
   getPharmacies,
-} = require(
-  "../controllers/pharmacyController"
-);
+  getPharmacyProfile,
+} = require("../controllers/pharmacyController");
 
 
-// TEST
+// ================= TEST =================
+
 router.get("/test", (req, res) => {
-
-  res.send(
-    "Pharmacy route working"
-  );
+  res.send("Pharmacy route working");
 });
 
 
-// ADD PHARMACY
+// ================= ADD PHARMACY =================
+
 router.post(
   "/add",
   addPharmacy
 );
 
 
-// GET PHARMACIES
+// ================= GET ALL PHARMACIES =================
+
 router.get(
   "/all",
   getPharmacies
 );
+
+
+// ================= GET PHARMACY PROFILE BY PHONE =================
+
+router.get(
+  "/profile/:phone",
+  getPharmacyProfile
+);
+
 
 module.exports = router;

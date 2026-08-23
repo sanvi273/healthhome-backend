@@ -1,20 +1,14 @@
-const Doctor =
-require("../models/doctor");
+const Doctor = require("../models/doctor");
 
-
-// ================= ADD DOCTOR =================
+// ================= ADD / UPDATE DOCTOR =================
 
 const addDoctor = async (req, res) => {
-
     try {
-
-        const existingDoctor =
-            await Doctor.findOne({
-               phone: req.body.phone,
-            });
+        const existingDoctor = await Doctor.findOne({
+            phone: req.body.phone,
+        });
 
         if (existingDoctor) {
-
             existingDoctor.specialization =
                 req.body.specialization;
 
@@ -33,35 +27,23 @@ const addDoctor = async (req, res) => {
             await existingDoctor.save();
 
             return res.status(200).json({
-
                 success: true,
-
-                message:
-                    "Doctor updated successfully",
-
+                message: "Doctor updated successfully",
                 doctor: existingDoctor,
             });
         }
 
-        const doctor =
-            await Doctor.create(req.body);
+        const doctor = await Doctor.create(req.body);
 
         res.status(201).json({
-
             success: true,
-
-            message:
-                "Doctor added successfully",
-
+            message: "Doctor added successfully",
             doctor,
         });
 
     } catch (error) {
-
         res.status(500).json({
-
             success: false,
-
             message: error.message,
         });
     }
@@ -71,32 +53,56 @@ const addDoctor = async (req, res) => {
 // ================= GET ALL DOCTORS =================
 
 const getDoctors = async (req, res) => {
-
     try {
-
-        const doctors =
-        await Doctor.find();
+        const doctors = await Doctor.find();
 
         res.status(200).json({
-
             success: true,
-
             doctors,
         });
 
     } catch (error) {
-
         res.status(500).json({
-
             success: false,
-
             message: error.message,
         });
     }
 };
 
-module.exports = {
 
+// ================= GET DOCTOR PROFILE BY PHONE =================
+
+const getDoctorProfile = async (req, res) => {
+    try {
+        const doctor = await Doctor.findOne({
+            phone: req.params.phone,
+        });
+
+        if (!doctor) {
+            return res.status(404).json({
+                success: false,
+                message: "Doctor profile not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            doctor,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+
+// ================= EXPORT =================
+
+module.exports = {
     addDoctor,
     getDoctors,
+    getDoctorProfile,
 };

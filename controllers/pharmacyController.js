@@ -1,5 +1,5 @@
 const Pharmacy =
-require("../models/pharmacy");
+  require("../models/pharmacy");
 
 
 // ================= ADD PHARMACY =================
@@ -26,6 +26,12 @@ const addPharmacy = async (req, res) => {
 
       existingPharmacy.address =
         req.body.address;
+
+      // If city is provided, update it too
+      if (req.body.city !== undefined) {
+        existingPharmacy.city =
+          req.body.city;
+      }
 
       await existingPharmacy.save();
 
@@ -72,7 +78,7 @@ const getPharmacies = async (req, res) => {
   try {
 
     const pharmacies =
-    await Pharmacy.find();
+      await Pharmacy.find();
 
     res.status(200).json({
 
@@ -92,8 +98,53 @@ const getPharmacies = async (req, res) => {
   }
 };
 
+
+// ================= GET PHARMACY PROFILE BY PHONE =================
+
+const getPharmacyProfile = async (req, res) => {
+
+  try {
+
+    const pharmacy =
+      await Pharmacy.findOne({
+        phone: req.params.phone,
+      });
+
+    if (!pharmacy) {
+
+      return res.status(404).json({
+
+        success: false,
+
+        message:
+          "Pharmacy profile not found",
+      });
+    }
+
+    return res.status(200).json({
+
+      success: true,
+
+      pharmacy,
+    });
+
+  } catch (error) {
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: error.message,
+    });
+  }
+};
+
+
+// ================= EXPORT =================
+
 module.exports = {
 
   addPharmacy,
   getPharmacies,
+  getPharmacyProfile,
 };
