@@ -1,6 +1,17 @@
 const Pharmacy =
   require("../models/pharmacy");
 
+  console.log("🔥 PHARMACY MODEL LOADED");
+
+console.log(
+  "🔥 PHARMACY SCHEMA FIELDS:",
+  Object.keys(Pharmacy.schema.paths)
+);
+
+console.log(
+  "🔥 CITY FIELD:",
+  Pharmacy.schema.paths.city
+);
 
 // ================= ADD PHARMACY =================
 
