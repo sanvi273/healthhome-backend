@@ -10,35 +10,71 @@ const {
   getAllOrders,
 } = require("../controllers/orderController");
 
+console.log("✅ orderRoutes.js loaded");
 
-// =============================
-// Place Medicine Order
-// =============================
-router.post("/place", placeOrder);
+// ============================================================
+// TEST
+// ============================================================
 
+router.get("/test", (req, res) => {
+  res.json({
+    success: true,
+    message: "Order routes working",
+  });
+});
 
-// =============================
-// Get All Orders (Admin)
-// =============================
-router.get("/all", getAllOrders);
+// ============================================================
+// PLACE MEDICINE ORDER
+// POST /api/orders/place
+// ============================================================
 
+router.post(
+  "/place",
+  placeOrder
+);
 
-// =============================
-// Pharmacy Orders
-// =============================
-router.get("/pharmacy/:pharmacyId", getPharmacyOrders);
+// ============================================================
+// GET ALL ORDERS
+// GET /api/orders/all
+// ============================================================
 
+router.get(
+  "/all",
+  getAllOrders
+);
 
-// =============================
-// Patient Orders
-// =============================
-router.get("/patient/:phone", getPatientOrders);
+// ============================================================
+// PHARMACY ORDERS
+// GET /api/orders/pharmacy/:pharmacyId
+// ============================================================
 
+router.get(
+  "/pharmacy/:pharmacyId",
+  getPharmacyOrders
+);
 
-// =============================
-// Update Order Status
-// =============================
-router.put("/status/:id", updateOrderStatus);
+// ============================================================
+// PATIENT ORDERS
+// GET /api/orders/patient/:phone
+// ============================================================
 
+router.get(
+  "/patient/:phone",
+  getPatientOrders
+);
+
+// ============================================================
+// UPDATE ORDER STATUS
+// PUT /api/orders/status/:id
+// ============================================================
+
+router.put(
+  "/status/:id",
+  updateOrderStatus
+);
+
+// ============================================================
+// EXPORT ROUTER
+// ============================================================
 
 module.exports = router;
