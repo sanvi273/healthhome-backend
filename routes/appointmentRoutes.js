@@ -1,7 +1,7 @@
-const upload = require("../middleware/upload");
 const express = require("express");
-
 const router = express.Router();
+
+const upload = require("../middleware/upload");
 
 const {
   bookAppointment,
@@ -14,18 +14,15 @@ const {
   deleteAppointment,
   startConsultation,
   completeConsultation,
-   joinConsultation,
+  joinConsultation,
   checkReadyConsultation,
 } = require("../controllers/appointmentController");
 
-console.log({
-  startConsultation,
-  completeConsultation,
-  joinConsultation,
-  checkReadyConsultation,
-});
 
-// ================= BOOK APPOINTMENT =================
+// ============================================================
+// BOOK APPOINTMENT
+// POST /api/appointments/book
+// ============================================================
 
 router.post(
   "/book",
@@ -33,73 +30,126 @@ router.post(
   bookAppointment
 );
 
-// ================= GET ALL APPOINTMENTS =================
+
+// ============================================================
+// GET ALL APPOINTMENTS
+// GET /api/appointments/all
+// ============================================================
 
 router.get(
   "/all",
   getAppointments
 );
 
-// ================= GET DOCTOR APPOINTMENTS =================
+
+// ============================================================
+// GET DOCTOR APPOINTMENTS
+// GET /api/appointments/doctor/:doctorName
+// ============================================================
 
 router.get(
-  "/doctor/:doctorName",
+  "/doctor/:doctorId",
   getDoctorAppointments
 );
 
-// ================= GET PATIENT APPOINTMENTS =================
+
+// ============================================================
+// GET PATIENT APPOINTMENTS
+// GET /api/appointments/patient/:patientPhone
+// ============================================================
 
 router.get(
   "/patient/:patientPhone",
   getPatientAppointments
 );
 
+
+// ============================================================
+// CHECK READY VIDEO CONSULTATION
+// GET /api/appointments/ready/:patientPhone
+// ============================================================
+
 router.get(
   "/ready/:patientPhone",
   checkReadyConsultation
 );
 
-// ================= GET SINGLE APPOINTMENT =================
 
-router.get(
-  "/:id",
-  getAppointmentById
-);
-
-// ================= UPDATE STATUS =================
+// ============================================================
+// UPDATE APPOINTMENT STATUS
+// PUT /api/appointments/status/:id
+// ============================================================
 
 router.put(
   "/status/:id",
   updateAppointmentStatus
 );
 
-// ================= UPDATE PAYMENT STATUS =================
+
+// ============================================================
+// UPDATE PAYMENT STATUS
+// PUT /api/appointments/payment/:id
+// ============================================================
 
 router.put(
   "/payment/:id",
   updatePaymentStatus
 );
 
-// ================= DELETE APPOINTMENT =================
+
+// ============================================================
+// START VIDEO CONSULTATION
+// PUT /api/appointments/start-consultation/:id
+// ============================================================
 
 router.put(
   "/start-consultation/:id",
   startConsultation
 );
 
+
+// ============================================================
+// JOIN VIDEO CONSULTATION
+// PUT /api/appointments/join/:id
+// ============================================================
+
+router.put(
+  "/join/:id",
+  joinConsultation
+);
+
+
+// ============================================================
+// COMPLETE CONSULTATION
+// PUT /api/appointments/complete/:id
+// ============================================================
+
 router.put(
   "/complete/:id",
   completeConsultation
 );
+
+
+// ============================================================
+// GET SINGLE APPOINTMENT
+// GET /api/appointments/:id
+// ============================================================
+
+router.get(
+  "/:id",
+  getAppointmentById
+);
+
+
+// ============================================================
+// DELETE APPOINTMENT
+// DELETE /api/appointments/:id
+// ============================================================
 
 router.delete(
   "/:id",
   deleteAppointment
 );
 
-router.put(
-  "/join/:id",
-  joinConsultation,
-);
 
 module.exports = router;

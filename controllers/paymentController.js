@@ -1,5 +1,4 @@
 const Razorpay = require("razorpay");
-
 const crypto = require("crypto");
 
 const Payment = require("../models/Payment");
@@ -9,9 +8,10 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ==========================
-// CREATE PAYMENT ORDER
-// ==========================
+// ============================================================
+// CREATE RAZORPAY ORDER
+// ============================================================
+
 exports.createOrder = async (req, res) => {
   try {
     const {
@@ -23,34 +23,112 @@ exports.createOrder = async (req, res) => {
       serviceId,
     } = req.body;
 
-    const options = {
-      amount: amount * 100, // Razorpay uses paise
-      currency: "INR",
-      receipt: "receipt_" + Date.now(),
-    };
+    // --------------------------------------------------------
+    // VALIDATION
+    // --------------------------------------------------------
 
-    const order = await razorpay.orders.create(options);
+    if (!amount || Number(amount) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid payment amount is required",
+      });
+    }
 
-    res.json({
+    if (!userId || !serviceType || !serviceId) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "userId, serviceType and serviceId are required",
+      });
+    }
+
+    // --------------------------------------------------------
+    // AMOUNT IN PAISE
+    // --------------------------------------------------------
+
+    const amountInPaise = Math.round(
+      Number(amount) * 100
+    );
+
+    // --------------------------------------------------------
+    // RECEIPT
+    // --------------------------------------------------------
+
+    const receipt =
+      `healthhome_${serviceType.toLowerCase()}_${Date.now()}`;
+
+    // --------------------------------------------------------
+    // CREATE RAZORPAY ORDER
+    // --------------------------------------------------------
+
+    const order =
+      await razorpay.orders.create({
+        amount: amountInPaise,
+        currency: "INR",
+        receipt,
+        notes: {
+          userId: String(userId),
+          userPhone: String(userPhone || ""),
+          serviceType: String(serviceType),
+          serviceId: String(serviceId),
+        },
+      });
+
+    console.log(
+      "RAZORPAY ORDER CREATED:",
+      order.id
+    );
+
+    // --------------------------------------------------------
+    // RESPONSE
+    // --------------------------------------------------------
+
+    return res.status(200).json({
       success: true,
-      order,
-      key: process.env.RAZORPAY_KEY_ID,
-    });
-  } catch (err) {
-    console.log(err);
 
-    res.status(500).json({
+      key: process.env.RAZORPAY_KEY_ID,
+
+      order: {
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        receipt: order.receipt,
+      },
+
+      payment: {
+        amount: Number(amount),
+        userId,
+        userName,
+        userPhone,
+        serviceType,
+        serviceId,
+      },
+    });
+
+  } catch (error) {
+
+    console.error(
+      "CREATE RAZORPAY ORDER ERROR:",
+      error
+    );
+
+    return res.status(500).json({
       success: false,
-      message: err.message,
+      message:
+        error.message ||
+        "Unable to create Razorpay order",
     });
   }
 };
 
-// ==========================
-// VERIFY PAYMENT
-// ==========================
+
+// ============================================================
+// VERIFY RAZORPAY PAYMENT
+// ============================================================
+
 exports.verifyPayment = async (req, res) => {
   try {
+
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -60,10 +138,32 @@ exports.verifyPayment = async (req, res) => {
       userId,
       userName,
       userPhone,
+
       serviceType,
       serviceId,
+
       paymentMethod,
     } = req.body;
+
+    // --------------------------------------------------------
+    // VALIDATION
+    // --------------------------------------------------------
+
+    if (
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Razorpay payment information is incomplete",
+      });
+    }
+
+    // --------------------------------------------------------
+    // GENERATE SIGNATURE
+    // --------------------------------------------------------
 
     const generatedSignature =
       crypto
@@ -72,51 +172,116 @@ exports.verifyPayment = async (req, res) => {
           process.env.RAZORPAY_KEY_SECRET
         )
         .update(
-          razorpay_order_id +
-            "|" +
-            razorpay_payment_id
+          `${razorpay_order_id}|${razorpay_payment_id}`
         )
         .digest("hex");
 
-    if (generatedSignature !== razorpay_signature) {
+    // --------------------------------------------------------
+    // VERIFY SIGNATURE
+    // --------------------------------------------------------
+
+    if (
+      generatedSignature !==
+      razorpay_signature
+    ) {
+
+      console.error(
+        "RAZORPAY SIGNATURE VERIFICATION FAILED"
+      );
+
       return res.status(400).json({
         success: false,
-        message: "Payment Verification Failed",
+        message:
+          "Payment verification failed",
       });
     }
 
-    const payment = new Payment({
-      paymentId: razorpay_payment_id,
-      orderId: razorpay_order_id,
-      signature: razorpay_signature,
+    // --------------------------------------------------------
+    // PREVENT DUPLICATE PAYMENT RECORD
+    // --------------------------------------------------------
 
-      amount,
+    const existingPayment =
+      await Payment.findOne({
+        paymentId:
+          razorpay_payment_id,
+      });
 
-      userId,
-      userName,
-      userPhone,
+    if (existingPayment) {
 
-      serviceType,
-      serviceId,
+      return res.status(200).json({
+        success: true,
+        message:
+          "Payment already verified",
+        payment: existingPayment,
+      });
+    }
 
-      paymentMethod,
+    // --------------------------------------------------------
+    // SAVE PAYMENT
+    // --------------------------------------------------------
 
-      status: "Success",
-    });
+    const payment =
+      await Payment.create({
 
-    await payment.save();
+        paymentId:
+          razorpay_payment_id,
 
-    res.json({
+        orderId:
+          razorpay_order_id,
+
+        signature:
+          razorpay_signature,
+
+        amount:
+          Number(amount),
+
+        userId,
+
+        userName,
+
+        userPhone,
+
+        serviceType,
+
+        serviceId,
+
+        paymentMethod:
+          paymentMethod || "UPI",
+
+        status:
+          "Success",
+      });
+
+    console.log(
+      "PAYMENT VERIFIED:",
+      payment._id
+    );
+
+    // --------------------------------------------------------
+    // RESPONSE
+    // --------------------------------------------------------
+
+    return res.status(200).json({
       success: true,
-      message: "Payment Successful",
+
+      message:
+        "Payment verified successfully",
+
       payment,
     });
-  } catch (err) {
-    console.log(err);
 
-    res.status(500).json({
+  } catch (error) {
+
+    console.error(
+      "VERIFY PAYMENT ERROR:",
+      error
+    );
+
+    return res.status(500).json({
       success: false,
-      message: err.message,
+      message:
+        error.message ||
+        "Payment verification failed",
     });
   }
 };
