@@ -81,8 +81,8 @@ const addLabOrder = async (req, res) => {
       collectorPhone: "",
       collectorStatus: "Not Assigned",
 
-      reportUrl: "",
-      reportUploadedAt: null,
+      reports: [],
+reportUploadedAt: null,
     });
 
     console.log("================================");
@@ -810,43 +810,66 @@ const updateLabOrderStatus = async (
 
 
 // ============================================================
-// UPLOAD REPORT
+// UPLOAD LAB REPORT
+// Supports:
+// 1. Multiple images
+// 2. PDF
 // ============================================================
 
-const uploadReport = async (
-  req,
-  res
-) => {
+const uploadReport = async (req, res) => {
   try {
-    const {
-      reportUrl,
-    } = req.body;
+    const { reports } = req.body;
 
-    if (!reportUrl) {
+    // --------------------------------------------------------
+    // VALIDATE REPORTS
+    // --------------------------------------------------------
+
+    if (!reports) {
       return res.status(400).json({
         success: false,
-        message:
-          "Report URL is required",
+        message: "Reports are required",
       });
     }
 
-    const order =
-      await LabOrder.findById(
-        req.params.id
-      );
+    let reportList = reports;
+
+    // If Flutter sends JSON as a string
+    if (typeof reports === "string") {
+      try {
+        reportList = JSON.parse(reports);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid reports format",
+        });
+      }
+    }
+
+    if (!Array.isArray(reportList) || reportList.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one report file is required",
+      });
+    }
+
+    // --------------------------------------------------------
+    // FIND ORDER
+    // --------------------------------------------------------
+
+    const order = await LabOrder.findById(req.params.id);
 
     if (!order) {
       return res.status(404).json({
         success: false,
-        message:
-          "Lab order not found",
+        message: "Lab order not found",
       });
     }
 
-    if (
-      order.status !==
-      "In Progress"
-    ) {
+    // --------------------------------------------------------
+    // CHECK STATUS
+    // --------------------------------------------------------
+
+    if (order.status !== "In Progress") {
       return res.status(400).json({
         success: false,
         message:
@@ -854,24 +877,58 @@ const uploadReport = async (
       });
     }
 
-    order.reportUrl =
-      reportUrl;
+    // --------------------------------------------------------
+    // VALIDATE EACH REPORT
+    // --------------------------------------------------------
 
-    order.reportUploadedAt =
-      new Date();
+    const cleanedReports = reportList.map((report, index) => {
+      if (!report.fileUrl) {
+        throw new Error(
+          `Report file URL is missing for page ${index + 1}`
+        );
+      }
 
-    order.status =
-      "Completed";
+      return {
+        fileName: report.fileName || `Report_Page_${index + 1}`,
+        fileUrl: report.fileUrl,
+        fileType: report.fileType || "unknown",
+        pageNumber: Number(report.pageNumber) || index + 1,
+      };
+    });
+
+    // --------------------------------------------------------
+    // SAVE REPORTS
+    // --------------------------------------------------------
+
+    order.reports = cleanedReports;
+
+    order.reportUploadedAt = new Date();
+
+    // Report is now ready
+    order.status = "Completed";
 
     await order.save();
 
-    return res.status(200).json({
-      success: true,
-      message:
-        "Lab report uploaded successfully",
-      order,
+    console.log("================================");
+    console.log("LAB REPORT UPLOADED");
+    console.log("ORDER ID =", order._id);
+    console.log("TOTAL REPORT FILES =", order.reports.length);
+
+    order.reports.forEach((report) => {
+      console.log(
+        `PAGE ${report.pageNumber}:`,
+        report.fileName
+      );
     });
 
+    console.log("STATUS =", order.status);
+    console.log("================================");
+
+    return res.status(200).json({
+      success: true,
+      message: "Lab report uploaded successfully",
+      order,
+    });
   } catch (error) {
     console.error(
       "UPLOAD REPORT ERROR:",

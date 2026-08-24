@@ -159,15 +159,39 @@ const labOrderSchema = new mongoose.Schema(
     // LAB REPORT
     // =====================================================
 
-    reportUrl: {
+    // =====================================================
+// LAB REPORT
+// =====================================================
+
+// Supports multiple report pages/files
+reports: [
+  {
+    fileName: {
       type: String,
       default: "",
     },
 
-    reportUploadedAt: {
-      type: Date,
-      default: null,
+    fileUrl: {
+      type: String,
+      default: "",
     },
+
+    fileType: {
+      type: String,
+      default: "",
+    },
+
+    pageNumber: {
+      type: Number,
+      default: 1,
+    },
+  },
+],
+
+reportUploadedAt: {
+  type: Date,
+  default: null,
+},
   },
 
   {
