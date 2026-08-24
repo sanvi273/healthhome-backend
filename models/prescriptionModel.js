@@ -1,50 +1,180 @@
-console.log("🔥 NEW MODEL LOADED");
+console.log("🔥 PRESCRIPTION MODEL LOADED");
 
 const mongoose = require("mongoose");
 
 const prescriptionSchema = new mongoose.Schema(
   {
-    appointmentId: String,
+    // =====================================================
+    // APPOINTMENT DETAILS
+    // =====================================================
 
-    patientId: String,
+    appointmentId: {
+      type: String,
+      default: "",
+    },
 
-    patientName: String,
+    // =====================================================
+    // PATIENT DETAILS
+    // =====================================================
 
-    patientPhone: String,
+    patientId: {
+      type: String,
+      default: "",
+    },
 
-    doctorId: String,
+    patientName: {
+      type: String,
+      default: "",
+    },
 
-    doctorName: String,
+    patientPhone: {
+      type: String,
+      default: "",
+    },
 
-    diagnosis: String,
+    // =====================================================
+    // DOCTOR DETAILS
+    // =====================================================
 
-    symptoms: [String],
+    doctorId: {
+      type: String,
+      default: "",
+    },
+
+    doctorName: {
+      type: String,
+      default: "",
+    },
+
+    // =====================================================
+    // CLINICAL DETAILS
+    // =====================================================
+
+    diagnosis: {
+      type: String,
+      default: "",
+    },
+
+    symptoms: {
+      type: [String],
+      default: [],
+    },
+
+    advice: {
+      type: String,
+      default: "",
+    },
+
+    followUpDate: {
+      type: String,
+      default: "",
+    },
+
+    // =====================================================
+    // MEDICINES
+    // =====================================================
 
     medicines: [
       {
-        medicineId: String,
-        medicine: String,
-        price: String,
-        dose: String,
-        duration: String,
-        food: String,
-        instruction: String,
+        medicineId: {
+          type: String,
+          default: "",
+        },
+
+        medicine: {
+          type: String,
+          required: true,
+        },
+
+        price: {
+          type: String,
+          default: "",
+        },
+
+        dose: {
+          type: String,
+          default: "",
+        },
+
+        duration: {
+          type: String,
+          default: "",
+        },
+
+        food: {
+          type: String,
+          default: "",
+        },
+
+        instruction: {
+          type: String,
+          default: "",
+        },
+
+        morning: {
+          type: Boolean,
+          default: false,
+        },
+
+        afternoon: {
+          type: Boolean,
+          default: false,
+        },
+
+        night: {
+          type: Boolean,
+          default: false,
+        },
       },
     ],
 
-    labTests: [String],
+    // =====================================================
+    // LAB TESTS
+    // =====================================================
 
-    advice: String,
+    labTests: [
+      {
+        testName: {
+          type: String,
+          required: true,
+        },
 
-    followUpDate: String,
+        priority: {
+          type: String,
+          enum: [
+            "Normal",
+            "High",
+            "Urgent",
+          ],
+          default: "Normal",
+        },
 
-    pdfUrl: String,
+        note: {
+          type: String,
+          default: "",
+        },
+      },
+    ],
+
+    // =====================================================
+    // PDF
+    // =====================================================
+
+    pdfUrl: {
+      type: String,
+      default: "",
+    },
+
+    // =====================================================
+    // STATUS
+    // =====================================================
 
     status: {
       type: String,
       default: "SAVED",
     },
   },
+
   {
     timestamps: true,
   }
