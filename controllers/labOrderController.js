@@ -82,7 +82,7 @@ const addLabOrder = async (req, res) => {
       collectorStatus: "Not Assigned",
 
       reports: [],
-reportUploadedAt: null,
+      reportUploadedAt: null,
     });
 
     console.log("================================");
@@ -761,7 +761,10 @@ const updateLabOrderStatus = async (
 
     order.status = status;
 
-    // Keep collectorStatus synchronized
+    // --------------------------------------------------------
+    // KEEP COLLECTOR STATUS SYNCHRONIZED
+    // --------------------------------------------------------
+
     if (
       status ===
       "Collector Assigned"
@@ -814,11 +817,17 @@ const updateLabOrderStatus = async (
 // Supports:
 // 1. Multiple images
 // 2. PDF
+// 3. Custom human-readable report names
 // ============================================================
 
-const uploadReport = async (req, res) => {
+const uploadReport = async (
+  req,
+  res
+) => {
   try {
-    const { reports } = req.body;
+    const {
+      reports,
+    } = req.body;
 
     // --------------------------------------------------------
     // VALIDATE REPORTS
@@ -827,28 +836,45 @@ const uploadReport = async (req, res) => {
     if (!reports) {
       return res.status(400).json({
         success: false,
-        message: "Reports are required",
+        message:
+          "Reports are required",
       });
     }
 
     let reportList = reports;
 
-    // If Flutter sends JSON as a string
-    if (typeof reports === "string") {
+    // --------------------------------------------------------
+    // IF FLUTTER SENDS JSON AS STRING
+    // --------------------------------------------------------
+
+    if (
+      typeof reports ===
+      "string"
+    ) {
       try {
-        reportList = JSON.parse(reports);
+        reportList =
+          JSON.parse(reports);
       } catch (error) {
         return res.status(400).json({
           success: false,
-          message: "Invalid reports format",
+          message:
+            "Invalid reports format",
         });
       }
     }
 
-    if (!Array.isArray(reportList) || reportList.length === 0) {
+    // --------------------------------------------------------
+    // CHECK REPORT ARRAY
+    // --------------------------------------------------------
+
+    if (
+      !Array.isArray(reportList) ||
+      reportList.length === 0
+    ) {
       return res.status(400).json({
         success: false,
-        message: "At least one report file is required",
+        message:
+          "At least one report file is required",
       });
     }
 
@@ -856,12 +882,16 @@ const uploadReport = async (req, res) => {
     // FIND ORDER
     // --------------------------------------------------------
 
-    const order = await LabOrder.findById(req.params.id);
+    const order =
+      await LabOrder.findById(
+        req.params.id
+      );
 
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Lab order not found",
+        message:
+          "Lab order not found",
       });
     }
 
@@ -869,7 +899,10 @@ const uploadReport = async (req, res) => {
     // CHECK STATUS
     // --------------------------------------------------------
 
-    if (order.status !== "In Progress") {
+    if (
+      order.status !==
+      "In Progress"
+    ) {
       return res.status(400).json({
         success: false,
         message:
@@ -878,58 +911,158 @@ const uploadReport = async (req, res) => {
     }
 
     // --------------------------------------------------------
-    // VALIDATE EACH REPORT
+    // VALIDATE AND CLEAN EACH REPORT
     // --------------------------------------------------------
 
-    const cleanedReports = reportList.map((report, index) => {
-      if (!report.fileUrl) {
-        throw new Error(
-          `Report file URL is missing for page ${index + 1}`
-        );
-      }
+    const cleanedReports =
+      reportList.map(
+        (report, index) => {
 
-      return {
-        fileName: report.fileName || `Report_Page_${index + 1}`,
-        fileUrl: report.fileUrl,
-        fileType: report.fileType || "unknown",
-        pageNumber: Number(report.pageNumber) || index + 1,
-      };
-    });
+          // --------------------------------------------------
+          // CHECK FILE URL
+          // --------------------------------------------------
+
+          if (!report.fileUrl) {
+            throw new Error(
+              `Report file URL is missing for page ${index + 1}`
+            );
+          }
+
+          // --------------------------------------------------
+          // CHECK REPORT NAME
+          // --------------------------------------------------
+
+          const reportName =
+            String(
+              report.reportName ||
+              ""
+            ).trim();
+
+          if (!reportName) {
+            throw new Error(
+              `Report name is missing for page ${index + 1}`
+            );
+          }
+
+          // --------------------------------------------------
+          // CREATE CLEAN REPORT OBJECT
+          // --------------------------------------------------
+
+          return {
+
+            // Human-readable report name
+            //
+            // Example:
+            // CBC Report
+            // Thyroid Report
+            // Liver Function Test
+            // Blood Sugar Report
+
+            reportName:
+              reportName,
+
+            // Original uploaded file name
+
+            fileName:
+              report.fileName ||
+              `Report_Page_${index + 1}`,
+
+            // Cloudinary URL
+
+            fileUrl:
+              report.fileUrl,
+
+            // File type
+
+            fileType:
+              report.fileType ||
+              "unknown",
+
+            // Page number
+
+            pageNumber:
+              Number(
+                report.pageNumber
+              ) ||
+              index + 1,
+          };
+        }
+      );
 
     // --------------------------------------------------------
     // SAVE REPORTS
     // --------------------------------------------------------
 
-    order.reports = cleanedReports;
+    order.reports =
+      cleanedReports;
 
-    order.reportUploadedAt = new Date();
+    order.reportUploadedAt =
+      new Date();
 
-    // Report is now ready
-    order.status = "Completed";
+    // Report is now completed
+
+    order.status =
+      "Completed";
 
     await order.save();
 
-    console.log("================================");
-    console.log("LAB REPORT UPLOADED");
-    console.log("ORDER ID =", order._id);
-    console.log("TOTAL REPORT FILES =", order.reports.length);
+    // --------------------------------------------------------
+    // LOG REPORT DETAILS
+    // --------------------------------------------------------
 
-    order.reports.forEach((report) => {
-      console.log(
-        `PAGE ${report.pageNumber}:`,
-        report.fileName
-      );
-    });
+    console.log(
+      "================================"
+    );
 
-    console.log("STATUS =", order.status);
-    console.log("================================");
+    console.log(
+      "LAB REPORT UPLOADED"
+    );
+
+    console.log(
+      "ORDER ID =",
+      order._id
+    );
+
+    console.log(
+      "TOTAL REPORT FILES =",
+      order.reports.length
+    );
+
+    order.reports.forEach(
+      (report) => {
+
+        console.log(
+          `PAGE ${report.pageNumber}:`,
+          report.reportName,
+          "| FILE:",
+          report.fileName
+        );
+
+      }
+    );
+
+    console.log(
+      "STATUS =",
+      order.status
+    );
+
+    console.log(
+      "================================"
+    );
+
+    // --------------------------------------------------------
+    // RESPONSE
+    // --------------------------------------------------------
 
     return res.status(200).json({
       success: true,
-      message: "Lab report uploaded successfully",
+      message:
+        "Lab report uploaded successfully",
       order,
     });
+
   } catch (error) {
+
     console.error(
       "UPLOAD REPORT ERROR:",
       error
@@ -937,7 +1070,8 @@ const uploadReport = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message:
+        error.message,
     });
   }
 };
@@ -948,16 +1082,28 @@ const uploadReport = async (req, res) => {
 // ============================================================
 
 module.exports = {
+
   addLabOrder,
+
   getLabOrders,
+
   getLabOrderById,
+
   acceptLabOrder,
+
   rejectLabOrder,
+
   assignSampleCollector,
+
   collectorOnTheWay,
+
   markSampleCollected,
+
   markSampleReceived,
+
   startTesting,
+
   updateLabOrderStatus,
+
   uploadReport,
 };

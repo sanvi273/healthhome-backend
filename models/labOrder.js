@@ -51,6 +51,7 @@ const labOrderSchema = new mongoose.Schema(
 
     // Patient address
     // Mainly required for Home Collection
+
     address: {
       type: String,
       default: "",
@@ -132,23 +133,14 @@ const labOrderSchema = new mongoose.Schema(
 
       enum: [
         "Pending",
-
         "Accepted",
-
         "Collector Assigned",
-
         "On The Way",
-
         "Sample Collected",
-
         "Sample Received",
-
         "In Progress",
-
         "Report Ready",
-
         "Completed",
-
         "Rejected",
       ],
 
@@ -158,46 +150,125 @@ const labOrderSchema = new mongoose.Schema(
     // =====================================================
     // LAB REPORT
     // =====================================================
+    //
+    // Supports multiple report pages/files.
+    //
+    // Each uploaded report contains:
+    //
+    // reportName  -> Human-readable name entered by lab staff
+    // fileName    -> Original/uploaded file name
+    // fileUrl     -> Cloudinary URL
+    // fileType    -> Image/PDF type
+    // pageNumber  -> Report page number
+    //
+    // Example:
+    //
+    // reports: [
+    //   {
+    //     reportName: "CBC Report",
+    //     fileName: "cbc.jpg",
+    //     fileUrl: "https://...",
+    //     fileType: "image/jpeg",
+    //     pageNumber: 1
+    //   },
+    //
+    //   {
+    //     reportName: "Thyroid Report",
+    //     fileName: "thyroid.jpg",
+    //     fileUrl: "https://...",
+    //     fileType: "image/jpeg",
+    //     pageNumber: 2
+    //   }
+    // ]
+    //
+    // =====================================================
+
+    reports: [
+      {
+        // -------------------------------------------------
+        // HUMAN READABLE REPORT NAME
+        // -------------------------------------------------
+        //
+        // Entered by Lab Staff.
+        //
+        // Examples:
+        // CBC Report
+        // Thyroid Report
+        // Liver Function Test
+        // Blood Sugar Report
+        //
+        reportName: {
+          type: String,
+          default: "",
+          trim: true,
+        },
+
+        // -------------------------------------------------
+        // ORIGINAL FILE NAME
+        // -------------------------------------------------
+
+        fileName: {
+          type: String,
+          default: "",
+        },
+
+        // -------------------------------------------------
+        // CLOUDINARY FILE URL
+        // -------------------------------------------------
+
+        fileUrl: {
+          type: String,
+          default: "",
+        },
+
+        // -------------------------------------------------
+        // FILE TYPE
+        //
+        // Examples:
+        // image/jpeg
+        // image/png
+        // application/pdf
+        //
+        // -------------------------------------------------
+
+        fileType: {
+          type: String,
+          default: "",
+        },
+
+        // -------------------------------------------------
+        // PAGE NUMBER
+        // -------------------------------------------------
+
+        pageNumber: {
+          type: Number,
+          default: 1,
+        },
+      },
+    ],
 
     // =====================================================
-// LAB REPORT
-// =====================================================
+    // REPORT UPLOADED DATE/TIME
+    // =====================================================
 
-// Supports multiple report pages/files
-reports: [
-  {
-    fileName: {
-      type: String,
-      default: "",
-    },
-
-    fileUrl: {
-      type: String,
-      default: "",
-    },
-
-    fileType: {
-      type: String,
-      default: "",
-    },
-
-    pageNumber: {
-      type: Number,
-      default: 1,
+    reportUploadedAt: {
+      type: Date,
+      default: null,
     },
   },
-],
 
-reportUploadedAt: {
-  type: Date,
-  default: null,
-},
-  },
+  // =======================================================
+  // TIMESTAMPS
+  // =======================================================
 
   {
     timestamps: true,
   }
 );
+
+// =========================================================
+// EXPORT MODEL
+// =========================================================
 
 module.exports = mongoose.model(
   "LabOrder",
