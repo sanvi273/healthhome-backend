@@ -10,11 +10,273 @@ console.log("===============================");
 
 
 // ============================================================
+// HEALTHHOME PDF HEADER
+// ============================================================
+
+function addHealthHomeHeader(doc) {
+  const pageWidth = doc.page.width;
+
+  // ==========================================================
+  // HEADER BACKGROUND
+  // ==========================================================
+
+  doc
+    .save()
+    .rect(0, 0, pageWidth, 82)
+    .fill("#F0FAFA");
+
+  // ==========================================================
+  // HEALTHHOME LOGO
+  // ==========================================================
+
+  doc
+    .roundedRect(
+      45,
+      18,
+      44,
+      44,
+      11
+    )
+    .fill("#00C2CB");
+
+  // Medical cross - vertical
+  doc
+    .fillColor("#FFFFFF")
+    .rect(
+      61,
+      25,
+      12,
+      30
+    )
+    .fill();
+
+  // Medical cross - horizontal
+  doc
+    .fillColor("#FFFFFF")
+    .rect(
+      52,
+      34,
+      30,
+      12
+    )
+    .fill();
+
+  // ==========================================================
+  // HEALTHHOME NAME
+  // ==========================================================
+
+  doc
+    .fillColor("#123B40")
+    .font("Helvetica-Bold")
+    .fontSize(21)
+    .text(
+      "HealthHome.in",
+      103,
+      19
+    );
+
+  // ==========================================================
+  // TAGLINE
+  // ==========================================================
+
+  doc
+    .fillColor("#667085")
+    .font("Helvetica")
+    .fontSize(8.5)
+    .text(
+      "Your Complete Digital Healthcare Platform",
+      104,
+      45
+    );
+
+  // ==========================================================
+  // RIGHT SIDE
+  // ==========================================================
+
+  doc
+    .fillColor("#00AEB8")
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .text(
+      "DIGITAL HEALTHCARE",
+      pageWidth - 180,
+      29,
+      {
+        width: 135,
+        align: "right",
+      }
+    );
+
+  // ==========================================================
+  // HEADER LINE
+  // ==========================================================
+
+  doc
+    .moveTo(45, 82)
+    .lineTo(pageWidth - 45, 82)
+    .lineWidth(1)
+    .strokeColor("#00C2CB")
+    .stroke();
+
+  doc.restore();
+}
+
+
+// ============================================================
+// HEALTHHOME PDF FOOTER
+// ============================================================
+
+function addHealthHomeFooter(doc) {
+  const pageWidth = doc.page.width;
+  const pageHeight = doc.page.height;
+
+  doc
+    .save()
+    .moveTo(45, pageHeight - 45)
+    .lineTo(pageWidth - 45, pageHeight - 45)
+    .lineWidth(0.6)
+    .strokeColor("#D9E2E5")
+    .stroke();
+
+  doc
+    .fillColor("#667085")
+    .font("Helvetica")
+    .fontSize(8)
+    .text(
+      "Powered by HealthHome.in",
+      45,
+      pageHeight - 32
+    );
+
+  doc
+    .fillColor("#667085")
+    .font("Helvetica")
+    .fontSize(8)
+    .text(
+      "Digital Healthcare",
+      pageWidth - 145,
+      pageHeight - 32,
+      {
+        width: 100,
+        align: "right",
+      }
+    );
+
+  doc.restore();
+}
+
+
+// ============================================================
+// HEALTHHOME ADVERTISEMENT
+// ============================================================
+
+function addHealthHomeAdvertisement(doc) {
+  const pageWidth = doc.page.width;
+  const pageHeight = doc.page.height;
+
+  const x = 45;
+  const width = pageWidth - 90;
+
+  // Advertisement position
+  const y = pageHeight - 135;
+  const height = 75;
+
+  // ==========================================================
+  // ADVERTISEMENT BOX
+  // ==========================================================
+
+  doc
+    .save()
+    .roundedRect(
+      x,
+      y,
+      width,
+      height,
+      10
+    )
+    .fill("#F0FAFA");
+
+  // Left teal strip
+  doc
+    .roundedRect(
+      x,
+      y,
+      6,
+      height,
+      3
+    )
+    .fill("#00C2CB");
+
+  // ==========================================================
+  // BRAND NAME
+  // ==========================================================
+
+  doc
+    .fillColor("#123B40")
+    .font("Helvetica-Bold")
+    .fontSize(14)
+    .text(
+      "HealthHome.in",
+      x + 20,
+      y + 10
+    );
+
+  // ==========================================================
+  // ADVERTISEMENT TITLE
+  // ==========================================================
+
+  doc
+    .fillColor("#344054")
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text(
+      "Your Complete Digital Healthcare Platform",
+      x + 20,
+      y + 30
+    );
+
+  // ==========================================================
+  // SERVICES
+  // ==========================================================
+
+  doc
+    .fillColor("#667085")
+    .font("Helvetica")
+    .fontSize(8)
+    .text(
+      "Book Doctors  •  Order Medicines  •  Book Lab Tests  •  Access Reports",
+      x + 20,
+      y + 45,
+      {
+        width: width - 40,
+      }
+    );
+
+  // ==========================================================
+  // CALL TO ACTION
+  // ==========================================================
+
+  doc
+    .fillColor("#00AEB8")
+    .font("Helvetica-Bold")
+    .fontSize(8.5)
+    .text(
+      "Healthcare, simplified.   |   HealthHome.in",
+      x + 20,
+      y + 60
+    );
+
+  doc.restore();
+}
+
+
+// ============================================================
 // SAVE PRESCRIPTION
 // ============================================================
 
 const savePrescription = async (req, res) => {
   try {
+
     console.log("================================");
     console.log("SAVE PRESCRIPTION REQUEST");
     console.log("BODY:", req.body);
@@ -44,12 +306,19 @@ const savePrescription = async (req, res) => {
 
     if (typeof labTests === "string") {
       try {
-        labTests = JSON.parse(labTests);
+
+        labTests = JSON.parse(
+          labTests
+        );
+
       } catch (error) {
+
         return res.status(400).json({
           success: false,
-          message: "Invalid labTests JSON format.",
+          message:
+            "Invalid labTests JSON format.",
         });
+
       }
     }
 
@@ -59,46 +328,58 @@ const savePrescription = async (req, res) => {
     }
 
 
-    data.labTests = labTests.map((test) => {
+    data.labTests =
+      labTests.map((test) => {
 
-      if (typeof test === "string") {
+        if (typeof test === "string") {
+
+          return {
+            testName: test,
+            priority: "Normal",
+            note: "",
+          };
+
+        }
+
+
         return {
-          testName: test,
-          priority: "Normal",
-          note: "",
+          testName:
+            test.testName?.toString() ?? "",
+
+          priority:
+            test.priority?.toString() ??
+            "Normal",
+
+          note:
+            test.note?.toString() ?? "",
         };
-      }
 
-
-      return {
-        testName:
-          test.testName?.toString() ?? "",
-
-        priority:
-          test.priority?.toString() ??
-          "Normal",
-
-        note:
-          test.note?.toString() ?? "",
-      };
-    });
+      });
 
 
     // --------------------------------------------------------
     // MEDICINES
     // --------------------------------------------------------
 
-    let medicines = req.body.medicines;
+    let medicines =
+      req.body.medicines;
 
 
     if (typeof medicines === "string") {
+
       try {
-        medicines = JSON.parse(medicines);
+
+        medicines =
+          JSON.parse(medicines);
+
       } catch (error) {
+
         return res.status(400).json({
           success: false,
-          message: "Invalid medicines JSON format.",
+          message:
+            "Invalid medicines JSON format.",
         });
+
       }
     }
 
@@ -108,49 +389,53 @@ const savePrescription = async (req, res) => {
     }
 
 
-    data.medicines = medicines.map(
-      (medicine) => {
+    data.medicines =
+      medicines.map(
+        (medicine) => {
 
-        return {
-          medicineId:
-            medicine.medicineId
+          return {
+
+            medicineId:
+              medicine.medicineId
                 ?.toString() ?? "",
 
-          medicine:
-            medicine.medicine
+            medicine:
+              medicine.medicine
                 ?.toString() ?? "",
 
-          price:
-            medicine.price
+            price:
+              medicine.price
                 ?.toString() ?? "",
 
-          dose:
-            medicine.dose
+            dose:
+              medicine.dose
                 ?.toString() ?? "",
 
-          duration:
-            medicine.duration
+            duration:
+              medicine.duration
                 ?.toString() ?? "",
 
-          food:
-            medicine.food
+            food:
+              medicine.food
                 ?.toString() ?? "",
 
-          instruction:
-            medicine.instruction
+            instruction:
+              medicine.instruction
                 ?.toString() ?? "",
 
-          morning:
-            medicine.morning === true,
+            morning:
+              medicine.morning === true,
 
-          afternoon:
-            medicine.afternoon === true,
+            afternoon:
+              medicine.afternoon === true,
 
-          night:
-            medicine.night === true,
-        };
-      }
-    );
+            night:
+              medicine.night === true,
+
+          };
+
+        }
+      );
 
 
     // --------------------------------------------------------
@@ -173,7 +458,9 @@ const savePrescription = async (req, res) => {
     // --------------------------------------------------------
 
     const prescription =
-      await Prescription.create(data);
+      await Prescription.create(
+        data
+      );
 
 
     // --------------------------------------------------------
@@ -181,12 +468,14 @@ const savePrescription = async (req, res) => {
     // --------------------------------------------------------
 
     res.status(201).json({
+
       success: true,
 
       message:
         "Prescription Saved Successfully",
 
       prescription,
+
     });
 
   } catch (e) {
@@ -197,9 +486,12 @@ const savePrescription = async (req, res) => {
     );
 
     res.status(500).json({
+
       success: false,
       message: e.message,
+
     });
+
   }
 };
 
@@ -229,10 +521,14 @@ const getPatientPrescriptions =
     } catch (e) {
 
       res.status(500).json({
+
         success: false,
         message: e.message,
+
       });
+
     }
+
   };
 
 
@@ -249,25 +545,47 @@ const downloadPrescription =
         req.params;
 
 
+      // ========================================================
+      // FIND PRESCRIPTION
+      // ========================================================
+
       const prescription =
-        await Prescription.findById(id);
+        await Prescription.findById(
+          id
+        );
 
 
       if (!prescription) {
 
         return res.status(404).json({
+
           success: false,
+
           message:
             "Prescription not found",
+
         });
+
       }
 
 
+      // ========================================================
+      // CREATE PDF
+      // ========================================================
+
       const doc =
         new PDFDocument({
+
+          size: "A4",
+
           margin: 50,
+
         });
 
+
+      // ========================================================
+      // RESPONSE HEADERS
+      // ========================================================
 
       res.setHeader(
         "Content-Type",
@@ -281,14 +599,31 @@ const downloadPrescription =
       );
 
 
+      // ========================================================
+      // CONNECT PDF TO RESPONSE
+      // ========================================================
+
       doc.pipe(res);
 
 
-      // ------------------------------------------------------
-      // HEADER
-      // ------------------------------------------------------
+      // ========================================================
+      // HEALTHHOME HEADER
+      // ========================================================
+
+      addHealthHomeHeader(doc);
+
+
+      // Content starts below header
+      doc.y = 105;
+
+
+      // ========================================================
+      // TITLE
+      // ========================================================
 
       doc
+        .fillColor("#111111")
+        .font("Helvetica-Bold")
         .fontSize(22)
         .text(
           "HealthHome Prescription",
@@ -301,11 +636,13 @@ const downloadPrescription =
       doc.moveDown();
 
 
-      // ------------------------------------------------------
-      // PATIENT
-      // ------------------------------------------------------
+      // ========================================================
+      // PATIENT / DOCTOR
+      // ========================================================
 
       doc
+        .fillColor("#111111")
+        .font("Helvetica")
         .fontSize(13)
         .text(
           `Doctor : ${
@@ -338,9 +675,9 @@ const downloadPrescription =
       doc.moveDown();
 
 
-      // ------------------------------------------------------
+      // ========================================================
       // SYMPTOMS
-      // ------------------------------------------------------
+      // ========================================================
 
       if (
         prescription.symptoms &&
@@ -348,33 +685,42 @@ const downloadPrescription =
       ) {
 
         doc
+          .font("Helvetica-Bold")
           .fontSize(14)
-          .text("Symptoms");
+          .text(
+            "Symptoms"
+          );
 
 
         prescription.symptoms.forEach(
           (symptom) => {
 
             doc
+              .font("Helvetica")
               .fontSize(11)
               .text(
                 `- ${symptom}`
               );
+
           }
         );
 
 
         doc.moveDown();
+
       }
 
 
-      // ------------------------------------------------------
+      // ========================================================
       // MEDICINES
-      // ------------------------------------------------------
+      // ========================================================
 
       doc
+        .font("Helvetica-Bold")
         .fontSize(14)
-        .text("Medicines");
+        .text(
+          "Medicines"
+        );
 
 
       if (
@@ -386,6 +732,7 @@ const downloadPrescription =
           (medicine) => {
 
             doc
+              .font("Helvetica")
               .fontSize(11)
               .text(
                 `- ${
@@ -415,45 +762,62 @@ const downloadPrescription =
             );
 
 
+            // ==================================================
+            // MEDICINE TIME
+            // ==================================================
+
             const times = [];
 
 
             if (
               medicine.morning
             ) {
+
               times.push(
                 "Morning"
               );
+
             }
 
 
             if (
               medicine.afternoon
             ) {
+
               times.push(
                 "Afternoon"
               );
+
             }
 
 
             if (
               medicine.night
             ) {
+
               times.push(
                 "Night"
               );
+
             }
 
 
-            if (times.length > 0) {
+            if (
+              times.length > 0
+            ) {
 
               doc.text(
                 `  Time: ${
                   times.join(", ")
                 }`
               );
+
             }
 
+
+            // ==================================================
+            // INSTRUCTION
+            // ==================================================
 
             if (
               medicine.instruction
@@ -464,33 +828,42 @@ const downloadPrescription =
                   medicine.instruction
                 }`
               );
+
             }
 
 
-            doc.moveDown(0.5);
+            doc.moveDown(
+              0.5
+            );
+
           }
         );
 
       } else {
 
         doc
+          .font("Helvetica")
           .fontSize(11)
           .text(
             "No medicines prescribed."
           );
+
       }
 
 
       doc.moveDown();
 
 
-      // ------------------------------------------------------
+      // ========================================================
       // LAB TESTS
-      // ------------------------------------------------------
+      // ========================================================
 
       doc
+        .font("Helvetica-Bold")
         .fontSize(14)
-        .text("Lab Tests");
+        .text(
+          "Lab Tests"
+        );
 
 
       if (
@@ -502,6 +875,7 @@ const downloadPrescription =
           (test) => {
 
             doc
+              .font("Helvetica")
               .fontSize(11)
               .text(
                 `- ${
@@ -512,7 +886,8 @@ const downloadPrescription =
 
             doc.text(
               `  Priority: ${
-                test.priority || "Normal"
+                test.priority ||
+                "Normal"
               }`
             );
 
@@ -524,48 +899,82 @@ const downloadPrescription =
                   test.note
                 }`
               );
+
             }
 
 
-            doc.moveDown(0.5);
+            doc.moveDown(
+              0.5
+            );
+
           }
         );
 
       } else {
 
         doc
+          .font("Helvetica")
           .fontSize(11)
           .text(
             "No lab tests prescribed."
           );
+
       }
 
 
       doc.moveDown();
 
 
-      // ------------------------------------------------------
+      // ========================================================
       // ADVICE
-      // ------------------------------------------------------
+      // ========================================================
 
       if (
         prescription.advice
       ) {
 
         doc
+          .font("Helvetica-Bold")
           .fontSize(14)
-          .text("Advice");
+          .text(
+            "Advice"
+          );
 
 
         doc
+          .font("Helvetica")
           .fontSize(11)
           .text(
             prescription.advice
           );
+
       }
 
 
+      // ========================================================
+      // HEALTHHOME ADVERTISEMENT
+      // ========================================================
+
+      addHealthHomeAdvertisement(
+        doc
+      );
+
+
+      // ========================================================
+      // HEALTHHOME FOOTER
+      // ========================================================
+
+      addHealthHomeFooter(
+        doc
+      );
+
+
+      // ========================================================
+      // FINISH PDF
+      // ========================================================
+
       doc.end();
+
 
     } catch (e) {
 
@@ -574,11 +983,21 @@ const downloadPrescription =
         e
       );
 
-      res.status(500).json({
-        success: false,
-        message: e.message,
-      });
+
+      if (!res.headersSent) {
+
+        res.status(500).json({
+
+          success: false,
+
+          message: e.message,
+
+        });
+
+      }
+
     }
+
   };
 
 
@@ -596,16 +1015,22 @@ const sendPrescription =
 
 
       const prescription =
-        await Prescription.findById(id);
+        await Prescription.findById(
+          id
+        );
 
 
       if (!prescription) {
 
         return res.status(404).json({
+
           success: false,
+
           message:
             "Prescription not found",
+
         });
+
       }
 
 
@@ -627,6 +1052,7 @@ const sendPrescription =
               true,
           }
         );
+
       }
 
 
@@ -638,7 +1064,9 @@ const sendPrescription =
           "Prescription sent successfully",
 
         prescription,
+
       });
+
 
     } catch (e) {
 
@@ -647,11 +1075,17 @@ const sendPrescription =
         e
       );
 
+
       res.status(500).json({
+
         success: false,
+
         message: e.message,
+
       });
+
     }
+
   };
 
 
@@ -660,15 +1094,22 @@ const sendPrescription =
 // ============================================================
 
 module.exports = {
+
   savePrescription,
+
   getPatientPrescriptions,
+
   downloadPrescription,
+
   sendPrescription,
+
 };
+
 
 console.log(
   "✅ Prescription controller exports:",
   {
+
     savePrescription:
       typeof savePrescription,
 
@@ -680,5 +1121,6 @@ console.log(
 
     sendPrescription:
       typeof sendPrescription,
+
   }
 );
