@@ -7,6 +7,7 @@ const {
   getPharmacyOrders,
   getPatientOrders,
   updateOrderStatus,
+  collectCODPayment,
   getAllOrders,
 } = require("../controllers/orderController");
 
@@ -71,6 +72,19 @@ router.get(
 router.put(
   "/status/:id",
   updateOrderStatus
+);
+
+// ============================================================
+// COLLECT COD PAYMENT
+//
+// PUT /api/orders/cod/collect/:id
+//
+// This is used when the delivery/cash collection is completed.
+// ============================================================
+
+router.put(
+  "/cod/collect/:id",
+  collectCODPayment
 );
 
 // ============================================================

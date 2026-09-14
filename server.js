@@ -25,72 +25,166 @@ const paymentRoutes = require("./routes/paymentRoutes");
 
 const app = express();
 
-// ================= MIDDLEWARE =================
+// ================= CORS =================
 
 app.use(cors());
+
+// ============================================================
+// RAZORPAY WEBHOOK RAW BODY
+// ============================================================
+//
+// IMPORTANT:
+//
+// This route must receive the raw request body so that
+// Razorpay webhook signature verification can be performed.
+//
+// It MUST come before express.json().
+//
+// ============================================================
+
+app.use(
+  "/api/payment/webhook",
+  express.raw({
+    type: "application/json",
+  })
+);
+
+// ================= NORMAL BODY PARSERS =================
+
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  express.urlencoded({
+    extended: true,
+  })
+);
 
 // ================= ROUTES =================
 
-app.use("/api/auth", authRoutes);
+app.use(
+  "/api/auth",
+  authRoutes
+);
 
-app.use("/api/doctors", doctorRoutes);
+app.use(
+  "/api/doctors",
+  doctorRoutes
+);
 
-app.use("/api/labs", labRoutes);
+app.use(
+  "/api/labs",
+  labRoutes
+);
 
-app.use("/api/pharmacies", pharmacyRoutes);
+app.use(
+  "/api/pharmacies",
+  pharmacyRoutes
+);
 
-app.use("/api/appointments", appointmentRoutes);
+app.use(
+  "/api/appointments",
+  appointmentRoutes
+);
 
-app.use("/api/profile", profileRoutes);
+app.use(
+  "/api/profile",
+  profileRoutes
+);
 
-app.use("/api/medicines", medicineRoutes);
+app.use(
+  "/api/medicines",
+  medicineRoutes
+);
 
-app.use("/api/orders", orderRoutes);
+app.use(
+  "/api/orders",
+  orderRoutes
+);
 
-app.use("/api/cart", cartRoutes);
+app.use(
+  "/api/cart",
+  cartRoutes
+);
 
-console.log("Cart Routes Loaded Successfully");
+console.log(
+  "Cart Routes Loaded Successfully"
+);
+
 console.log(cartRoutes);
 
-app.use("/api/lab-orders", labOrderRoutes);
+app.use(
+  "/api/lab-orders",
+  labOrderRoutes
+);
 
 app.use(
   "/api/sample-collectors",
   sampleCollectorRoutes
 );
 
-console.log("Mounting prescription routes...");
-app.use("/api/prescriptions", prescriptionRoutes);
-console.log("Prescription routes mounted.");
+console.log(
+  "Mounting prescription routes..."
+);
 
-console.log("Mounting payment routes...");
-app.use("/api/payment", paymentRoutes);
-console.log("Payment routes mounted.");
+app.use(
+  "/api/prescriptions",
+  prescriptionRoutes
+);
 
+console.log(
+  "Prescription routes mounted."
+);
+
+console.log(
+  "Mounting payment routes..."
+);
+
+app.use(
+  "/api/payment",
+  paymentRoutes
+);
+
+console.log(
+  "Payment routes mounted."
+);
 
 // ================= TEST ROUTE =================
 
 app.get("/", (req, res) => {
-  res.send("HealthHome Backend Running");
+  res.send(
+    "HealthHome Backend Running"
+  );
 });
 
 // ================= MONGODB =================
 
 mongoose
-  .connect(process.env.MONGO_URL)
+  .connect(
+    process.env.MONGO_URL
+  )
   .then(() => {
-    console.log("✅ MongoDB Connected");
+    console.log(
+      "✅ MongoDB Connected"
+    );
   })
   .catch((err) => {
-    console.log("MongoDB Error:", err);
+    console.log(
+      "MongoDB Error:",
+      err
+    );
   });
 
 // ================= SERVER =================
 
-const PORT = process.env.PORT || 5000;
+const PORT =
+  process.env.PORT || 5000;
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+app.listen(
+  PORT,
+  "0.0.0.0",
+  () => {
+    console.log(
+      `🚀 Server running on port ${PORT}`
+    );
+  }
+);

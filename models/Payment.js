@@ -3,23 +3,35 @@ const mongoose = require("mongoose");
 const paymentSchema = new mongoose.Schema(
   {
     // ============================================================
+    // HEALTHHOME ORDER
+    // ============================================================
+
+    orderReferenceId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    // ============================================================
     // RAZORPAY PAYMENT
     // ============================================================
 
     paymentId: {
       type: String,
-      required: true,
+      default: "",
       unique: true,
+      sparse: true,
     },
 
     orderId: {
       type: String,
-      required: true,
+      default: "",
+      index: true,
     },
 
     signature: {
       type: String,
-      required: true,
+      default: "",
     },
 
     // ============================================================
@@ -57,7 +69,7 @@ const paymentSchema = new mongoose.Schema(
 
     serviceId: {
       type: String,
-      required: true,
+      default: "",
     },
 
     // ============================================================
@@ -82,6 +94,10 @@ const paymentSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       enum: [
+        "ONLINE",
+        "COD",
+
+        // Existing values kept for old records
         "UPI",
         "Card",
         "Net Banking",
@@ -102,9 +118,19 @@ const paymentSchema = new mongoose.Schema(
         "Pending",
         "Success",
         "Failed",
+        "Collected",
         "Refunded",
       ],
       default: "Pending",
+    },
+
+    // ============================================================
+    // RAZORPAY PAYMENT STATUS
+    // ============================================================
+
+    razorpayStatus: {
+      type: String,
+      default: "",
     },
 
     // ============================================================
@@ -120,6 +146,11 @@ const paymentSchema = new mongoose.Schema(
         "Failed",
       ],
       default: "Pending",
+    },
+
+    settlementId: {
+      type: String,
+      default: "",
     },
 
     // ============================================================
@@ -157,6 +188,20 @@ const paymentSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+
+    // ============================================================
+    // COD COLLECTION
+    // ============================================================
+
+    cashCollected: {
+      type: Boolean,
+      default: false,
+    },
+
+    cashCollectedAt: {
+      type: Date,
+      default: null,
     },
 
     // ============================================================
