@@ -922,7 +922,10 @@ const uploadReport = async (
           // CHECK FILE URL
           // --------------------------------------------------
 
-          if (!report.fileUrl) {
+          if (
+            !report ||
+            !report.fileUrl
+          ) {
             throw new Error(
               `Report file URL is missing for page ${index + 1}`
             );
@@ -945,41 +948,30 @@ const uploadReport = async (
           }
 
           // --------------------------------------------------
-          // CREATE CLEAN REPORT OBJECT
+          // CLEAN REPORT OBJECT
           // --------------------------------------------------
 
           return {
 
-            // Human-readable report name
-            //
-            // Example:
-            // CBC Report
-            // Thyroid Report
-            // Liver Function Test
-            // Blood Sugar Report
-
+            // Human-readable name
             reportName:
               reportName,
 
             // Original uploaded file name
-
             fileName:
               report.fileName ||
               `Report_Page_${index + 1}`,
 
             // Cloudinary URL
-
             fileUrl:
               report.fileUrl,
 
             // File type
-
             fileType:
               report.fileType ||
               "unknown",
 
             // Page number
-
             pageNumber:
               Number(
                 report.pageNumber
@@ -992,19 +984,48 @@ const uploadReport = async (
     // --------------------------------------------------------
     // SAVE REPORTS
     // --------------------------------------------------------
+    //
+    // IMPORTANT:
+    // Use findByIdAndUpdate() instead of order.save().
+    //
+    // This prevents validation of unrelated required fields
+    // in an older LabOrder document, such as patientId,
+    // while updating the report information.
+    //
+    // --------------------------------------------------------
 
-    order.reports =
-      cleanedReports;
+    const updatedOrder =
+      await LabOrder.findByIdAndUpdate(
+        req.params.id,
+        {
+          $set: {
+            reports:
+              cleanedReports,
 
-    order.reportUploadedAt =
-      new Date();
+            reportUploadedAt:
+              new Date(),
 
-    // Report is now completed
+            status:
+              "Completed",
+          },
+        },
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
 
-    order.status =
-      "Completed";
+    // --------------------------------------------------------
+    // CHECK UPDATED ORDER
+    // --------------------------------------------------------
 
-    await order.save();
+    if (!updatedOrder) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Lab order not found while saving report",
+      });
+    }
 
     // --------------------------------------------------------
     // LOG REPORT DETAILS
@@ -1020,15 +1041,15 @@ const uploadReport = async (
 
     console.log(
       "ORDER ID =",
-      order._id
+      updatedOrder._id
     );
 
     console.log(
       "TOTAL REPORT FILES =",
-      order.reports.length
+      updatedOrder.reports.length
     );
 
-    order.reports.forEach(
+    updatedOrder.reports.forEach(
       (report) => {
 
         console.log(
@@ -1043,7 +1064,7 @@ const uploadReport = async (
 
     console.log(
       "STATUS =",
-      order.status
+      updatedOrder.status
     );
 
     console.log(
@@ -1058,7 +1079,8 @@ const uploadReport = async (
       success: true,
       message:
         "Lab report uploaded successfully",
-      order,
+      order:
+        updatedOrder,
     });
 
   } catch (error) {
