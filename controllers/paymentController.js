@@ -223,8 +223,7 @@ exports.createOrder = async (req, res) => {
     // RAZORPAY RECEIPT
     // ==========================================================
 
-    const receipt =
-      `healthhome_medicine_${String(order._id)}_${Date.now()}`;
+    const receipt = `HH_${Date.now()}`;
 
     console.log("RAZORPAY RECEIPT =", receipt);
 
