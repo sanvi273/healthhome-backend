@@ -8,10 +8,56 @@ const Order = require("../models/orderModel");
 // RAZORPAY CONFIGURATION
 // ============================================================
 
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+
+if (!razorpayKeyId) {
+  console.error("❌ RAZORPAY_KEY_ID is missing.");
+}
+
+if (!razorpayKeySecret) {
+  console.error("❌ RAZORPAY_KEY_SECRET is missing.");
+}
+
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+  key_id: razorpayKeyId,
+  key_secret: razorpayKeySecret,
 });
+
+// ============================================================
+// HELPER - CHECK RAZORPAY CONFIGURATION
+// ============================================================
+
+const checkRazorpayConfiguration = () => {
+  if (!razorpayKeyId || !razorpayKeySecret) {
+    return {
+      success: false,
+      message:
+        "Razorpay credentials are not configured on the server.",
+    };
+  }
+
+  return {
+    success: true,
+  };
+};
+
+// ============================================================
+// HELPER - FORMAT RAZORPAY ERROR
+// ============================================================
+
+const getRazorpayErrorDetails = (error) => {
+  return {
+    message: error?.message || "",
+    description: error?.error?.description || "",
+    code: error?.error?.code || "",
+    field: error?.error?.field || "",
+    source: error?.error?.source || "",
+    step: error?.error?.step || "",
+    reason: error?.error?.reason || "",
+    statusCode: error?.statusCode || "",
+  };
+};
 
 // ============================================================
 // CREATE RAZORPAY ORDER
@@ -19,12 +65,17 @@ const razorpay = new Razorpay({
 // POST /api/payment/create-order
 //
 // IMPORTANT:
-// Amount is NOT taken from Flutter.
-// Amount comes from the HealthHome Order in MongoDB.
+// Amount is ALWAYS taken from the HealthHome Order.
+// Flutter cannot decide the payment amount.
 // ============================================================
 
 exports.createOrder = async (req, res) => {
   try {
+    console.log("");
+    console.log("==============================================");
+    console.log("CREATE RAZORPAY ORDER");
+    console.log("==============================================");
+
     const {
       userId,
       userName,
@@ -33,21 +84,33 @@ exports.createOrder = async (req, res) => {
       serviceId,
     } = req.body;
 
-    console.log(
-      "========== CREATE RAZORPAY ORDER =========="
-    );
+    console.log("USER ID =", userId);
+    console.log("USER NAME =", userName);
+    console.log("USER PHONE =", userPhone);
+    console.log("SERVICE TYPE =", serviceType);
+    console.log("SERVICE ID =", serviceId);
 
-    console.log({
-      userId,
-      userName,
-      userPhone,
-      serviceType,
-      serviceId,
-    });
+    // ==========================================================
+    // CHECK RAZORPAY CONFIGURATION
+    // ==========================================================
 
-    // ========================================================
+    const razorpayConfig = checkRazorpayConfiguration();
+
+    if (!razorpayConfig.success) {
+      console.error(
+        "❌ RAZORPAY CONFIGURATION ERROR:",
+        razorpayConfig.message
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: razorpayConfig.message,
+      });
+    }
+
+    // ==========================================================
     // VALIDATION
-    // ========================================================
+    // ==========================================================
 
     if (!serviceType || !serviceId) {
       return res.status(400).json({
@@ -57,224 +120,310 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // ========================================================
+    // ==========================================================
     // MEDICINE / PHARMACY PAYMENT
-    // ========================================================
+    // ==========================================================
 
-    if (serviceType === "Medicine") {
-      // ------------------------------------------------------
-      // serviceId = HealthHome Order MongoDB ID
-      // ------------------------------------------------------
-
-      const order = await Order.findById(
-        serviceId
-      );
-
-      if (!order) {
-        return res.status(404).json({
-          success: false,
-          message:
-            "Medicine order not found.",
-        });
-      }
-
-      // ------------------------------------------------------
-      // ONLY ONLINE ORDERS CAN USE RAZORPAY
-      // ------------------------------------------------------
-
-      if (
-        order.paymentMethod !== "ONLINE"
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Razorpay can only be used for ONLINE orders.",
-        });
-      }
-
-      // ------------------------------------------------------
-      // PREVENT DUPLICATE PAYMENT
-      // ------------------------------------------------------
-
-      if (
-        order.paymentStatus === "Paid"
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "This order has already been paid.",
-        });
-      }
-
-      // ------------------------------------------------------
-      // GET ACTUAL AMOUNT FROM DATABASE
-      // ------------------------------------------------------
-
-      const amount =
-        Number(order.totalAmount);
-
-      if (
-        !Number.isFinite(amount) ||
-        amount <= 0
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Invalid order amount.",
-        });
-      }
-
-      // ------------------------------------------------------
-      // CONVERT RUPEES TO PAISE
-      // ------------------------------------------------------
-
-      const amountInPaise =
-        Math.round(amount * 100);
-
-      // ------------------------------------------------------
-      // RAZORPAY RECEIPT
-      // ------------------------------------------------------
-
-      const receipt =
-        `healthhome_medicine_${order._id}_${Date.now()}`;
-
-      // ------------------------------------------------------
-      // CREATE RAZORPAY ORDER
-      // ------------------------------------------------------
-
-      const razorpayOrder =
-        await razorpay.orders.create({
-          amount:
-            amountInPaise,
-
-          currency:
-            "INR",
-
-          receipt,
-
-          notes: {
-            healthhomeOrderId:
-              String(order._id),
-
-            patientId:
-              String(
-                order.patientId || ""
-              ),
-
-            patientPhone:
-              String(
-                order.patientPhone || ""
-              ),
-
-            pharmacyId:
-              String(
-                order.pharmacyId || ""
-              ),
-
-            pharmacyName:
-              String(
-                order.pharmacyName || ""
-              ),
-
-            serviceType:
-              "Medicine",
-          },
-        });
-
-      // ------------------------------------------------------
-      // SAVE RAZORPAY ORDER ID
-      // ------------------------------------------------------
-
-      order.razorpayOrderId =
-        razorpayOrder.id;
-
-      order.paymentStatus =
-        "Pending";
-
-      await order.save();
-
-      console.log(
-        "RAZORPAY ORDER CREATED:",
-        razorpayOrder.id
-      );
-
-      // ------------------------------------------------------
-      // RESPONSE TO FLUTTER
-      // ------------------------------------------------------
-
-      return res.status(200).json({
-        success: true,
-
-        key:
-          process.env.RAZORPAY_KEY_ID,
-
-        order: {
-          id:
-            razorpayOrder.id,
-
-          amount:
-            razorpayOrder.amount,
-
-          currency:
-            razorpayOrder.currency,
-
-          receipt:
-            razorpayOrder.receipt,
-        },
-
-        payment: {
-          amount,
-
-          userId:
-            order.patientId ||
-            userId ||
-            "",
-
-          userName:
-            order.patientName ||
-            userName ||
-            "",
-
-          userPhone:
-            order.patientPhone ||
-            userPhone ||
-            "",
-
-          serviceType:
-            "Medicine",
-
-          serviceId:
-            String(order._id),
-        },
+    if (serviceType !== "Medicine") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Only Medicine payment is enabled in the current payment flow.",
       });
     }
 
-    // ========================================================
-    // OTHER SERVICES
-    // ========================================================
+    // ==========================================================
+    // FIND HEALTHHOME ORDER
+    // ==========================================================
 
-    return res.status(400).json({
-      success: false,
-      message:
-        "Only Medicine payment is enabled in the new secure payment flow.",
-    });
+    const order = await Order.findById(serviceId);
 
-  } catch (error) {
+    if (!order) {
+      console.error(
+        "❌ HEALTHHOME ORDER NOT FOUND:",
+        serviceId
+      );
 
-    console.error(
-      "CREATE RAZORPAY ORDER ERROR:",
-      error
+      return res.status(404).json({
+        success: false,
+        message: "Medicine order not found.",
+      });
+    }
+
+    console.log("HEALTHHOME ORDER FOUND");
+    console.log("ORDER ID =", order._id);
+    console.log("ORDER TOTAL =", order.totalAmount);
+    console.log("PAYMENT METHOD =", order.paymentMethod);
+    console.log("PAYMENT STATUS =", order.paymentStatus);
+
+    // ==========================================================
+    // ONLY ONLINE ORDERS CAN USE RAZORPAY
+    // ==========================================================
+
+    if (order.paymentMethod !== "ONLINE") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Razorpay can only be used for ONLINE orders.",
+      });
+    }
+
+    // ==========================================================
+    // PREVENT DUPLICATE PAYMENT
+    // ==========================================================
+
+    if (order.paymentStatus === "Paid") {
+      return res.status(400).json({
+        success: false,
+        message: "This order has already been paid.",
+      });
+    }
+
+    // ==========================================================
+    // GET SECURE AMOUNT FROM DATABASE
+    // ==========================================================
+
+    const amount = Number(order.totalAmount);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      console.error(
+        "❌ INVALID HEALTHHOME ORDER AMOUNT:",
+        order.totalAmount
+      );
+
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order amount.",
+      });
+    }
+
+    // ==========================================================
+    // RAZORPAY AMOUNT
+    //
+    // HealthHome: ₹213
+    // Razorpay: 21300 paise
+    // ==========================================================
+
+    const amountInPaise = Math.round(amount * 100);
+
+    if (
+      !Number.isInteger(amountInPaise) ||
+      amountInPaise <= 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Razorpay payment amount.",
+      });
+    }
+
+    console.log("HEALTHHOME AMOUNT =", amount);
+    console.log("RAZORPAY AMOUNT PAISE =", amountInPaise);
+
+    // ==========================================================
+    // RAZORPAY RECEIPT
+    // ==========================================================
+
+    const receipt =
+      `healthhome_medicine_${String(order._id)}_${Date.now()}`;
+
+    console.log("RAZORPAY RECEIPT =", receipt);
+
+    // ==========================================================
+    // CREATE RAZORPAY ORDER
+    // ==========================================================
+
+    let razorpayOrder;
+
+    try {
+      console.log("");
+      console.log("---------- RAZORPAY API REQUEST ----------");
+      console.log("AMOUNT =", amountInPaise);
+      console.log("CURRENCY = INR");
+      console.log("RECEIPT =", receipt);
+      console.log("-------------------------------------------");
+
+      razorpayOrder = await razorpay.orders.create({
+        amount: amountInPaise,
+        currency: "INR",
+        receipt: receipt,
+
+        notes: {
+          healthhomeOrderId: String(order._id),
+
+          patientId: String(
+            order.patientId || userId || ""
+          ),
+
+          patientPhone: String(
+            order.patientPhone || userPhone || ""
+          ),
+
+          pharmacyId: String(
+            order.pharmacyId || ""
+          ),
+
+          pharmacyName: String(
+            order.pharmacyName || ""
+          ),
+
+          serviceType: "Medicine",
+        },
+      });
+
+      console.log("");
+      console.log("✅ RAZORPAY ORDER CREATED");
+      console.log("RAZORPAY ORDER ID =", razorpayOrder.id);
+      console.log("RAZORPAY AMOUNT =", razorpayOrder.amount);
+      console.log("RAZORPAY CURRENCY =", razorpayOrder.currency);
+      console.log("");
+    } catch (razorpayError) {
+      const details =
+        getRazorpayErrorDetails(razorpayError);
+
+      console.error("");
+      console.error("==============================================");
+      console.error("❌ RAZORPAY ORDER CREATION FAILED");
+      console.error("==============================================");
+      console.error(
+        "MESSAGE =",
+        details.message
+      );
+      console.error(
+        "DESCRIPTION =",
+        details.description
+      );
+      console.error(
+        "CODE =",
+        details.code
+      );
+      console.error(
+        "FIELD =",
+        details.field
+      );
+      console.error(
+        "SOURCE =",
+        details.source
+      );
+      console.error(
+        "STEP =",
+        details.step
+      );
+      console.error(
+        "REASON =",
+        details.reason
+      );
+      console.error(
+        "STATUS CODE =",
+        details.statusCode
+      );
+      console.error(
+        "FULL RAZORPAY ERROR =",
+        razorpayError
+      );
+      console.error("==============================================");
+      console.error("");
+
+      return res.status(500).json({
+        success: false,
+        message:
+          details.description ||
+          details.message ||
+          "Unable to create Razorpay order.",
+
+        code: details.code || "",
+      });
+    }
+
+    // ==========================================================
+    // VALIDATE RAZORPAY RESPONSE
+    // ==========================================================
+
+    if (!razorpayOrder || !razorpayOrder.id) {
+      console.error(
+        "❌ Razorpay returned an invalid order response."
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Razorpay returned an invalid order response.",
+      });
+    }
+
+    // ==========================================================
+    // SAVE RAZORPAY ORDER ID IN HEALTHHOME ORDER
+    // ==========================================================
+
+    order.razorpayOrderId =
+      razorpayOrder.id;
+
+    order.paymentStatus =
+      "Pending";
+
+    await order.save();
+
+    console.log(
+      "✅ HEALTHHOME ORDER UPDATED WITH RAZORPAY ORDER ID"
     );
+
+    // ==========================================================
+    // RESPONSE TO FLUTTER
+    // ==========================================================
+
+    return res.status(200).json({
+      success: true,
+
+      key: razorpayKeyId,
+
+      order: {
+        id: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        receipt: razorpayOrder.receipt,
+      },
+
+      payment: {
+        amount: amount,
+
+        userId:
+          order.patientId ||
+          userId ||
+          "",
+
+        userName:
+          order.patientName ||
+          userName ||
+          "",
+
+        userPhone:
+          order.patientPhone ||
+          userPhone ||
+          "",
+
+        serviceType: "Medicine",
+
+        serviceId:
+          String(order._id),
+      },
+    });
+  } catch (error) {
+    console.error("");
+    console.error("==============================================");
+    console.error("❌ CREATE RAZORPAY ORDER SERVER ERROR");
+    console.error("==============================================");
+    console.error("MESSAGE =", error?.message);
+    console.error("STACK =", error?.stack);
+    console.error("FULL ERROR =", error);
+    console.error("==============================================");
 
     return res.status(500).json({
       success: false,
       message:
-        error.message ||
+        error?.message ||
         "Unable to create Razorpay order.",
     });
   }
 };
-
 
 // ============================================================
 // VERIFY RAZORPAY PAYMENT
@@ -284,29 +433,57 @@ exports.createOrder = async (req, res) => {
 
 exports.verifyPayment = async (req, res) => {
   try {
+    console.log("");
+    console.log("==============================================");
+    console.log("VERIFY RAZORPAY PAYMENT");
+    console.log("==============================================");
+
     const {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-
       serviceType,
       serviceId,
     } = req.body;
 
     console.log(
-      "========== VERIFY RAZORPAY PAYMENT =========="
+      "RAZORPAY ORDER ID =",
+      razorpay_order_id
     );
 
-    console.log({
-      razorpay_order_id,
-      razorpay_payment_id,
-      serviceType,
-      serviceId,
-    });
+    console.log(
+      "RAZORPAY PAYMENT ID =",
+      razorpay_payment_id
+    );
 
-    // ========================================================
+    console.log(
+      "SERVICE TYPE =",
+      serviceType
+    );
+
+    console.log(
+      "SERVICE ID =",
+      serviceId
+    );
+
+    // ==========================================================
+    // CHECK RAZORPAY CONFIGURATION
+    // ==========================================================
+
+    const razorpayConfig =
+      checkRazorpayConfiguration();
+
+    if (!razorpayConfig.success) {
+      return res.status(500).json({
+        success: false,
+        message:
+          razorpayConfig.message,
+      });
+    }
+
+    // ==========================================================
     // VALIDATION
-    // ========================================================
+    // ==========================================================
 
     if (
       !razorpay_order_id ||
@@ -320,10 +497,7 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    if (
-      !serviceType ||
-      !serviceId
-    ) {
+    if (!serviceType || !serviceId) {
       return res.status(400).json({
         success: false,
         message:
@@ -331,28 +505,24 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // ========================================================
-    // ONLY MEDICINE PAYMENT FOR NOW
-    // ========================================================
+    // ==========================================================
+    // ONLY MEDICINE PAYMENT
+    // ==========================================================
 
-    if (
-      serviceType !== "Medicine"
-    ) {
+    if (serviceType !== "Medicine") {
       return res.status(400).json({
         success: false,
         message:
-          "Only Medicine payment is enabled in the new secure payment flow.",
+          "Only Medicine payment is enabled.",
       });
     }
 
-    // ========================================================
+    // ==========================================================
     // FIND HEALTHHOME ORDER
-    // ========================================================
+    // ==========================================================
 
     const order =
-      await Order.findById(
-        serviceId
-      );
+      await Order.findById(serviceId);
 
     if (!order) {
       return res.status(404).json({
@@ -362,14 +532,23 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // ========================================================
+    console.log(
+      "HEALTHHOME ORDER FOUND =",
+      order._id
+    );
+
+    // ==========================================================
     // VERIFY RAZORPAY ORDER ID
-    // ========================================================
+    // ==========================================================
 
     if (
-      order.razorpayOrderId !==
-      razorpay_order_id
+      String(order.razorpayOrderId) !==
+      String(razorpay_order_id)
     ) {
+      console.error(
+        "❌ RAZORPAY ORDER ID MISMATCH"
+      );
+
       return res.status(400).json({
         success: false,
         message:
@@ -377,24 +556,24 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // ========================================================
+    // ==========================================================
     // GENERATE SIGNATURE
-    // ========================================================
+    // ==========================================================
 
     const generatedSignature =
       crypto
         .createHmac(
           "sha256",
-          process.env.RAZORPAY_KEY_SECRET
+          razorpayKeySecret
         )
         .update(
           `${razorpay_order_id}|${razorpay_payment_id}`
         )
         .digest("hex");
 
-    // ========================================================
+    // ==========================================================
     // SAFE SIGNATURE COMPARISON
-    // ========================================================
+    // ==========================================================
 
     const generatedBuffer =
       Buffer.from(
@@ -412,6 +591,10 @@ exports.verifyPayment = async (req, res) => {
       generatedBuffer.length !==
       receivedBuffer.length
     ) {
+      console.error(
+        "❌ PAYMENT SIGNATURE LENGTH MISMATCH"
+      );
+
       return res.status(400).json({
         success: false,
         message:
@@ -426,7 +609,7 @@ exports.verifyPayment = async (req, res) => {
       )
     ) {
       console.error(
-        "RAZORPAY SIGNATURE VERIFICATION FAILED"
+        "❌ RAZORPAY SIGNATURE VERIFICATION FAILED"
       );
 
       return res.status(400).json({
@@ -436,27 +619,54 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // ========================================================
-    // FETCH PAYMENT FROM RAZORPAY
-    // ========================================================
+    console.log(
+      "✅ RAZORPAY SIGNATURE VERIFIED"
+    );
 
-    const razorpayPayment =
-      await razorpay.payments.fetch(
-        razorpay_payment_id
+    // ==========================================================
+    // FETCH PAYMENT FROM RAZORPAY
+    // ==========================================================
+
+    let razorpayPayment;
+
+    try {
+      razorpayPayment =
+        await razorpay.payments.fetch(
+          razorpay_payment_id
+        );
+    } catch (razorpayError) {
+      const details =
+        getRazorpayErrorDetails(
+          razorpayError
+        );
+
+      console.error(
+        "❌ FAILED TO FETCH RAZORPAY PAYMENT"
       );
 
+      console.error(details);
+
+      return res.status(500).json({
+        success: false,
+        message:
+          details.description ||
+          details.message ||
+          "Unable to verify Razorpay payment.",
+      });
+    }
+
     console.log(
-      "RAZORPAY PAYMENT STATUS:",
+      "RAZORPAY PAYMENT STATUS =",
       razorpayPayment.status
     );
 
-    // ========================================================
+    // ==========================================================
     // VERIFY PAYMENT BELONGS TO SAME ORDER
-    // ========================================================
+    // ==========================================================
 
     if (
-      razorpayPayment.order_id !==
-      razorpay_order_id
+      String(razorpayPayment.order_id) !==
+      String(razorpay_order_id)
     ) {
       return res.status(400).json({
         success: false,
@@ -465,24 +675,34 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // ========================================================
+    // ==========================================================
     // VERIFY PAYMENT AMOUNT
-    // ========================================================
+    // ==========================================================
 
     const expectedAmountPaise =
       Math.round(
-        Number(order.totalAmount) *
-          100
+        Number(order.totalAmount) * 100
       );
 
+    const actualAmountPaise =
+      Number(razorpayPayment.amount);
+
+    console.log(
+      "EXPECTED AMOUNT PAISE =",
+      expectedAmountPaise
+    );
+
+    console.log(
+      "ACTUAL AMOUNT PAISE =",
+      actualAmountPaise
+    );
+
     if (
-      Number(
-        razorpayPayment.amount
-      ) !==
+      actualAmountPaise !==
       expectedAmountPaise
     ) {
       console.error(
-        "PAYMENT AMOUNT MISMATCH"
+        "❌ PAYMENT AMOUNT MISMATCH"
       );
 
       return res.status(400).json({
@@ -492,9 +712,9 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // ========================================================
-    // VERIFY CAPTURED
-    // ========================================================
+    // ==========================================================
+    // PAYMENT MUST BE CAPTURED
+    // ==========================================================
 
     if (
       razorpayPayment.status !==
@@ -507,9 +727,9 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // ========================================================
+    // ==========================================================
     // CHECK DUPLICATE PAYMENT
-    // ========================================================
+    // ==========================================================
 
     const existingPayment =
       await Payment.findOne({
@@ -518,6 +738,9 @@ exports.verifyPayment = async (req, res) => {
       });
 
     if (existingPayment) {
+      console.log(
+        "⚠️ PAYMENT ALREADY EXISTS"
+      );
 
       if (
         order.paymentStatus !==
@@ -537,43 +760,55 @@ exports.verifyPayment = async (req, res) => {
 
       return res.status(200).json({
         success: true,
-
         message:
           "Payment already verified.",
-
-        payment:
-          existingPayment,
-
-        order,
+        payment: existingPayment,
+        order: {
+          id: order._id,
+          totalAmount:
+            order.totalAmount,
+          paymentMethod:
+            order.paymentMethod,
+          paymentStatus:
+            order.paymentStatus,
+          status:
+            order.status,
+          settlementStatus:
+            order.settlementStatus,
+        },
       });
     }
 
-    // ========================================================
-    // PAYMENT AMOUNT IN RUPEES
-    // ========================================================
+    // ==========================================================
+    // PAID AMOUNT IN RUPEES
+    // ==========================================================
 
     const paidAmount =
-      Number(
-        razorpayPayment.amount
-      ) / 100;
+      actualAmountPaise / 100;
 
-    // ========================================================
-    // COMMISSION
-    // ========================================================
+    // ==========================================================
+    // PLATFORM FEE
+    // ==========================================================
 
     const platformFee =
       Number(
         order.platformFee || 0
       );
 
+    // ==========================================================
+    // PHARMACY AMOUNT
+    // ==========================================================
+
     const providerAmount =
       Number(
-        order.providerAmount || 0
+        order.providerAmount ||
+        order.totalAmount ||
+        0
       );
 
-    // ========================================================
+    // ==========================================================
     // CREATE PAYMENT RECORD
-    // ========================================================
+    // ==========================================================
 
     const payment =
       await Payment.create({
@@ -595,10 +830,10 @@ exports.verifyPayment = async (req, res) => {
           ),
 
         userName:
-          order.patientName,
+          order.patientName || "",
 
         userPhone:
-          order.patientPhone,
+          order.patientPhone || "",
 
         serviceType:
           "Medicine",
@@ -610,6 +845,7 @@ exports.verifyPayment = async (req, res) => {
           paidAmount,
 
         currency:
+          razorpayPayment.currency ||
           "INR",
 
         paymentMethod:
@@ -632,9 +868,11 @@ exports.verifyPayment = async (req, res) => {
         providerType:
           "Pharmacy",
 
-        platformFee,
+        platformFee:
+          platformFee,
 
-        providerAmount,
+        providerAmount:
+          providerAmount,
 
         cashCollected:
           false,
@@ -643,9 +881,14 @@ exports.verifyPayment = async (req, res) => {
           null,
       });
 
-    // ========================================================
+    console.log(
+      "✅ PAYMENT RECORD CREATED:",
+      payment._id
+    );
+
+    // ==========================================================
     // UPDATE HEALTHHOME ORDER
-    // ========================================================
+    // ==========================================================
 
     order.paymentStatus =
       "Paid";
@@ -665,18 +908,12 @@ exports.verifyPayment = async (req, res) => {
     await order.save();
 
     console.log(
-      "PAYMENT VERIFIED:",
-      payment._id
+      "✅ HEALTHHOME ORDER MARKED AS PAID"
     );
 
-    console.log(
-      "HEALTHHOME ORDER UPDATED:",
-      order._id
-    );
-
-    // ========================================================
-    // RESPONSE
-    // ========================================================
+    // ==========================================================
+    // FINAL RESPONSE
+    // ==========================================================
 
     return res.status(200).json({
       success: true,
@@ -706,48 +943,51 @@ exports.verifyPayment = async (req, res) => {
           order.settlementStatus,
       },
     });
-
   } catch (error) {
-
-    console.error(
-      "VERIFY PAYMENT ERROR:",
-      error
-    );
+    console.error("");
+    console.error("==============================================");
+    console.error("❌ VERIFY PAYMENT SERVER ERROR");
+    console.error("==============================================");
+    console.error("MESSAGE =", error?.message);
+    console.error("STACK =", error?.stack);
+    console.error("FULL ERROR =", error);
+    console.error("==============================================");
 
     return res.status(500).json({
       success: false,
       message:
-        error.message ||
+        error?.message ||
         "Payment verification failed.",
     });
   }
 };
-
 
 // ============================================================
 // RAZORPAY WEBHOOK
 //
 // POST /api/payment/webhook
 //
-// This receives payment events directly from Razorpay.
+// IMPORTANT:
+// server.js must use express.raw() for this route.
 // ============================================================
 
 exports.webhook = async (req, res) => {
   try {
-    console.log(
-      "========== RAZORPAY WEBHOOK =========="
-    );
+    console.log("");
+    console.log("==============================================");
+    console.log("RAZORPAY WEBHOOK");
+    console.log("==============================================");
 
-    // ========================================================
+    // ==========================================================
     // WEBHOOK SECRET
-    // ========================================================
+    // ==========================================================
 
     const webhookSecret =
       process.env.RAZORPAY_WEBHOOK_SECRET;
 
     if (!webhookSecret) {
       console.error(
-        "RAZORPAY_WEBHOOK_SECRET is missing."
+        "❌ RAZORPAY_WEBHOOK_SECRET is missing."
       );
 
       return res.status(500).json({
@@ -757,20 +997,18 @@ exports.webhook = async (req, res) => {
       });
     }
 
-    // ========================================================
+    // ==========================================================
     // RAW BODY
-    // ========================================================
+    // ==========================================================
 
     const rawBody =
       req.body;
 
     if (
-      !Buffer.isBuffer(
-        rawBody
-      )
+      !Buffer.isBuffer(rawBody)
     ) {
       console.error(
-        "Webhook body is not a raw Buffer."
+        "❌ WEBHOOK BODY IS NOT A RAW BUFFER"
       );
 
       return res.status(400).json({
@@ -780,9 +1018,9 @@ exports.webhook = async (req, res) => {
       });
     }
 
-    // ========================================================
-    // GET RAZORPAY SIGNATURE
-    // ========================================================
+    // ==========================================================
+    // RAZORPAY WEBHOOK SIGNATURE
+    // ==========================================================
 
     const receivedSignature =
       req.headers[
@@ -797,9 +1035,9 @@ exports.webhook = async (req, res) => {
       });
     }
 
-    // ========================================================
+    // ==========================================================
     // GENERATE WEBHOOK SIGNATURE
-    // ========================================================
+    // ==========================================================
 
     const generatedSignature =
       crypto
@@ -809,10 +1047,6 @@ exports.webhook = async (req, res) => {
         )
         .update(rawBody)
         .digest("hex");
-
-    // ========================================================
-    // SAFE SIGNATURE COMPARISON
-    // ========================================================
 
     const generatedBuffer =
       Buffer.from(
@@ -826,16 +1060,28 @@ exports.webhook = async (req, res) => {
         "utf8"
       );
 
+    // ==========================================================
+    // SIGNATURE LENGTH
+    // ==========================================================
+
     if (
       generatedBuffer.length !==
       receivedBuffer.length
     ) {
+      console.error(
+        "❌ WEBHOOK SIGNATURE LENGTH MISMATCH"
+      );
+
       return res.status(400).json({
         success: false,
         message:
           "Invalid webhook signature.",
       });
     }
+
+    // ==========================================================
+    // VERIFY WEBHOOK SIGNATURE
+    // ==========================================================
 
     if (
       !crypto.timingSafeEqual(
@@ -844,7 +1090,7 @@ exports.webhook = async (req, res) => {
       )
     ) {
       console.error(
-        "RAZORPAY WEBHOOK SIGNATURE FAILED"
+        "❌ RAZORPAY WEBHOOK SIGNATURE FAILED"
       );
 
       return res.status(400).json({
@@ -854,28 +1100,30 @@ exports.webhook = async (req, res) => {
       });
     }
 
-    // ========================================================
+    console.log(
+      "✅ WEBHOOK SIGNATURE VERIFIED"
+    );
+
+    // ==========================================================
     // PARSE WEBHOOK
-    // ========================================================
+    // ==========================================================
 
     const payload =
       JSON.parse(
-        rawBody.toString(
-          "utf8"
-        )
+        rawBody.toString("utf8")
       );
 
     const event =
       payload.event;
 
     console.log(
-      "RAZORPAY EVENT:",
+      "RAZORPAY EVENT =",
       event
     );
 
-    // ========================================================
+    // ==========================================================
     // PAYMENT CAPTURED
-    // ========================================================
+    // ==========================================================
 
     if (
       event ===
@@ -900,9 +1148,19 @@ exports.webhook = async (req, res) => {
       const razorpayOrderId =
         paymentEntity.order_id;
 
-      // ------------------------------------------------------
+      console.log(
+        "RAZORPAY PAYMENT ID =",
+        razorpayPaymentId
+      );
+
+      console.log(
+        "RAZORPAY ORDER ID =",
+        razorpayOrderId
+      );
+
+      // ========================================================
       // FIND HEALTHHOME ORDER
-      // ------------------------------------------------------
+      // ========================================================
 
       const order =
         await Order.findOne({
@@ -912,7 +1170,7 @@ exports.webhook = async (req, res) => {
 
       if (!order) {
         console.error(
-          "HealthHome order not found:",
+          "❌ HEALTHHOME ORDER NOT FOUND:",
           razorpayOrderId
         );
 
@@ -923,24 +1181,37 @@ exports.webhook = async (req, res) => {
         });
       }
 
-      // ------------------------------------------------------
+      // ========================================================
       // VERIFY AMOUNT
-      // ------------------------------------------------------
+      // ========================================================
 
       const expectedAmount =
         Math.round(
           Number(order.totalAmount) *
-            100
+          100
+        );
+
+      const webhookAmount =
+        Number(
+          paymentEntity.amount
         );
 
       if (
-        Number(
-          paymentEntity.amount
-        ) !==
+        webhookAmount !==
         expectedAmount
       ) {
         console.error(
-          "WEBHOOK AMOUNT MISMATCH"
+          "❌ WEBHOOK AMOUNT MISMATCH"
+        );
+
+        console.error(
+          "EXPECTED =",
+          expectedAmount
+        );
+
+        console.error(
+          "RECEIVED =",
+          webhookAmount
         );
 
         return res.status(400).json({
@@ -950,9 +1221,9 @@ exports.webhook = async (req, res) => {
         });
       }
 
-      // ------------------------------------------------------
+      // ========================================================
       // CHECK DUPLICATE
-      // ------------------------------------------------------
+      // ========================================================
 
       const existingPayment =
         await Payment.findOne({
@@ -962,9 +1233,27 @@ exports.webhook = async (req, res) => {
 
       if (existingPayment) {
         console.log(
-          "Webhook already processed:",
+          "⚠️ WEBHOOK PAYMENT ALREADY PROCESSED:",
           razorpayPaymentId
         );
+
+        if (
+          order.paymentStatus !==
+          "Paid"
+        ) {
+          order.paymentStatus =
+            "Paid";
+
+          order.razorpayPaymentId =
+            razorpayPaymentId;
+
+          order.paymentRecordId =
+            String(
+              existingPayment._id
+            );
+
+          await order.save();
+        }
 
         return res.status(200).json({
           success: true,
@@ -973,9 +1262,9 @@ exports.webhook = async (req, res) => {
         });
       }
 
-      // ------------------------------------------------------
+      // ========================================================
       // CREATE PAYMENT RECORD
-      // ------------------------------------------------------
+      // ========================================================
 
       const payment =
         await Payment.create({
@@ -997,10 +1286,10 @@ exports.webhook = async (req, res) => {
             ),
 
           userName:
-            order.patientName,
+            order.patientName || "",
 
           userPhone:
-            order.patientPhone,
+            order.patientPhone || "",
 
           serviceType:
             "Medicine",
@@ -1009,9 +1298,7 @@ exports.webhook = async (req, res) => {
             String(order._id),
 
           amount:
-            Number(
-              paymentEntity.amount
-            ) / 100,
+            webhookAmount / 100,
 
           currency:
             paymentEntity.currency ||
@@ -1045,7 +1332,9 @@ exports.webhook = async (req, res) => {
 
           providerAmount:
             Number(
-              order.providerAmount || 0
+              order.providerAmount ||
+              order.totalAmount ||
+              0
             ),
 
           cashCollected:
@@ -1055,9 +1344,14 @@ exports.webhook = async (req, res) => {
             null,
         });
 
-      // ------------------------------------------------------
-      // UPDATE ORDER
-      // ------------------------------------------------------
+      console.log(
+        "✅ WEBHOOK PAYMENT SAVED:",
+        payment._id
+      );
+
+      // ========================================================
+      // UPDATE HEALTHHOME ORDER
+      // ========================================================
 
       order.paymentStatus =
         "Paid";
@@ -1074,19 +1368,14 @@ exports.webhook = async (req, res) => {
       await order.save();
 
       console.log(
-        "WEBHOOK PAYMENT SAVED:",
-        payment._id
-      );
-
-      console.log(
-        "WEBHOOK ORDER UPDATED:",
+        "✅ WEBHOOK ORDER UPDATED:",
         order._id
       );
     }
 
-    // ========================================================
+    // ==========================================================
     // PAYMENT FAILED
-    // ========================================================
+    // ==========================================================
 
     if (
       event ===
@@ -1114,29 +1403,48 @@ exports.webhook = async (req, res) => {
           await order.save();
 
           console.log(
-            "PAYMENT FAILED:",
+            "❌ PAYMENT FAILED:",
             order._id
           );
         }
       }
     }
 
-    // ========================================================
-    // RESPONSE
-    // ========================================================
+    // ==========================================================
+    // ORDER PAID
+    //
+    // Some Razorpay setups can send order.paid.
+    // We acknowledge it without creating another
+    // Payment record because payment.captured handles it.
+    // ==========================================================
+
+    if (
+      event ===
+      "order.paid"
+    ) {
+      console.log(
+        "ℹ️ RAZORPAY ORDER.PAID RECEIVED"
+      );
+    }
+
+    // ==========================================================
+    // FINAL WEBHOOK RESPONSE
+    // ==========================================================
 
     return res.status(200).json({
       success: true,
       message:
         "Webhook processed successfully.",
     });
-
   } catch (error) {
-
-    console.error(
-      "RAZORPAY WEBHOOK ERROR:",
-      error
-    );
+    console.error("");
+    console.error("==============================================");
+    console.error("❌ RAZORPAY WEBHOOK ERROR");
+    console.error("==============================================");
+    console.error("MESSAGE =", error?.message);
+    console.error("STACK =", error?.stack);
+    console.error("FULL ERROR =", error);
+    console.error("==============================================");
 
     return res.status(500).json({
       success: false,
