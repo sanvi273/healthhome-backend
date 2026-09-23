@@ -1,10 +1,14 @@
 const mongoose = require("mongoose");
 
+// ============================================================
+// APPOINTMENT SCHEMA
+// ============================================================
+
 const appointmentSchema = new mongoose.Schema(
   {
-    // ============================================================
+    // ==========================================================
     // PATIENT
-    // ============================================================
+    // ==========================================================
 
     patientName: {
       type: String,
@@ -18,18 +22,16 @@ const appointmentSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // ============================================================
+    // ==========================================================
     // DOCTOR
-    // ============================================================
+    // ==========================================================
 
-    // MongoDB _id of Doctor document
     doctorId: {
       type: String,
       required: true,
       trim: true,
     },
 
-    // Kept for display purposes
     doctorName: {
       type: String,
       required: true,
@@ -54,22 +56,24 @@ const appointmentSchema = new mongoose.Schema(
       min: 0,
     },
 
-    // ============================================================
-    // APPOINTMENT TYPE
-    // ============================================================
+    // ==========================================================
+    // CONSULTATION
+    // ==========================================================
 
     consultationType: {
       type: String,
+
       enum: [
         "Video Consultation",
         "Hospital Visit",
       ],
+
       default: "Hospital Visit",
     },
 
-    // ============================================================
+    // ==========================================================
     // APPOINTMENT DATE / TIME
-    // ============================================================
+    // ==========================================================
 
     appointmentDate: {
       type: String,
@@ -83,9 +87,9 @@ const appointmentSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // ============================================================
-    // PATIENT UPLOADED REPORTS
-    // ============================================================
+    // ==========================================================
+    // REPORTS
+    // ==========================================================
 
     reports: [
       {
@@ -106,9 +110,9 @@ const appointmentSchema = new mongoose.Schema(
       },
     ],
 
-    // ============================================================
+    // ==========================================================
     // VIDEO CONSULTATION
-    // ============================================================
+    // ==========================================================
 
     meetingId: {
       type: String,
@@ -117,36 +121,40 @@ const appointmentSchema = new mongoose.Schema(
 
     consultationStatus: {
       type: String,
+
       enum: [
         "Pending",
         "Ready",
         "Joined",
         "Completed",
       ],
+
       default: "Pending",
     },
 
-    // ============================================================
+    // ==========================================================
     // PRESCRIPTION
-    // ============================================================
+    // ==========================================================
 
     prescriptionSent: {
       type: Boolean,
       default: false,
     },
 
-    // ============================================================
+    // ==========================================================
     // PAYMENT
-    // ============================================================
+    // ==========================================================
 
     paymentStatus: {
       type: String,
+
       enum: [
         "Pending",
         "Paid",
         "Failed",
         "Refunded",
       ],
+
       default: "Pending",
     },
 
@@ -162,12 +170,13 @@ const appointmentSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // ============================================================
+    // ==========================================================
     // APPOINTMENT STATUS
-    // ============================================================
+    // ==========================================================
 
     status: {
       type: String,
+
       enum: [
         "Pending",
         "Upcoming",
@@ -176,23 +185,24 @@ const appointmentSchema = new mongoose.Schema(
         "Cancelled",
         "Rejected",
       ],
+
       default: "Pending",
     },
   },
+
   {
     timestamps: true,
   }
 );
 
 // ============================================================
-// PREVENT DUPLICATE ACTIVE APPOINTMENT SLOT
-// ============================================================
+// UNIQUE ACTIVE APPOINTMENT SLOT
 //
-// Same doctor + same date + same time cannot be booked twice.
+// Same doctor + same date + same time
+// cannot have two active appointments.
 //
-// Cancelled / Rejected appointments are excluded so that the
-// slot can become available again.
-//
+// Cancelled and Rejected appointments
+// do NOT block the slot.
 // ============================================================
 
 appointmentSchema.index(
@@ -201,13 +211,16 @@ appointmentSchema.index(
     appointmentDate: 1,
     appointmentTime: 1,
   },
+
   {
     unique: true,
+
     partialFilterExpression: {
       doctorId: {
         $exists: true,
         $ne: "",
       },
+
       status: {
         $in: [
           "Pending",
@@ -223,7 +236,8 @@ appointmentSchema.index(
 // EXPORT
 // ============================================================
 
-module.exports = mongoose.model(
-  "Appointment",
-  appointmentSchema
-);
+module.exports =
+  mongoose.model(
+    "Appointment",
+    appointmentSchema
+  );

@@ -1,155 +1,214 @@
 const express = require("express");
-const router = express.Router();
 
-const upload = require("../middleware/upload");
+const router =
+  express.Router();
+
+// ============================================================
+// CONTROLLERS
+// ============================================================
 
 const {
   bookAppointment,
-  getAppointments,
-  getDoctorAppointments,
-  getPatientAppointments,
-  getAppointmentById,
-  updateAppointmentStatus,
-  updatePaymentStatus,
-  deleteAppointment,
-  startConsultation,
-  completeConsultation,
-  joinConsultation,
-  checkReadyConsultation,
-} = require("../controllers/appointmentController");
 
+  getAvailableSlots,
+
+  getAppointments,
+
+  getDoctorAppointments,
+
+  getPatientAppointments,
+
+  getAppointmentById,
+
+  updateAppointmentStatus,
+
+  updatePaymentStatus,
+
+  deleteAppointment,
+
+  startConsultation,
+
+  joinConsultation,
+
+  checkReadyConsultation,
+
+  completeConsultation,
+} = require(
+  "../controllers/appointmentController"
+);
+
+// ============================================================
+// UPLOAD MIDDLEWARE
+// ============================================================
+
+const upload =
+  require("../middleware/upload");
 
 // ============================================================
 // BOOK APPOINTMENT
-// POST /api/appointments/book
+// POST
+// /api/appointments/book
 // ============================================================
 
 router.post(
   "/book",
+
   upload.array("reports"),
+
   bookAppointment
 );
 
-
 // ============================================================
 // GET ALL APPOINTMENTS
-// GET /api/appointments/all
+// GET
+// /api/appointments/all
 // ============================================================
 
 router.get(
   "/all",
+
   getAppointments
 );
 
+// ============================================================
+// GET AVAILABLE SLOTS
+// GET
+// /api/appointments/available-slots/:doctorId/:date
+//
+// IMPORTANT:
+// This route MUST come before /:id
+// ============================================================
+
+router.get(
+  "/available-slots/:doctorId/:date",
+
+  getAvailableSlots
+);
 
 // ============================================================
 // GET DOCTOR APPOINTMENTS
-// GET /api/appointments/doctor/:doctorName
+// GET
+// /api/appointments/doctor/:doctorId
 // ============================================================
 
 router.get(
   "/doctor/:doctorId",
+
   getDoctorAppointments
 );
 
-
 // ============================================================
 // GET PATIENT APPOINTMENTS
-// GET /api/appointments/patient/:patientPhone
+// GET
+// /api/appointments/patient/:patientPhone
 // ============================================================
 
 router.get(
   "/patient/:patientPhone",
+
   getPatientAppointments
 );
 
-
 // ============================================================
 // CHECK READY VIDEO CONSULTATION
-// GET /api/appointments/ready/:patientPhone
+// GET
+// /api/appointments/ready/:patientPhone
 // ============================================================
 
 router.get(
   "/ready/:patientPhone",
+
   checkReadyConsultation
 );
 
-
 // ============================================================
 // UPDATE APPOINTMENT STATUS
-// PUT /api/appointments/status/:id
+// PUT
+// /api/appointments/status/:id
 // ============================================================
 
 router.put(
   "/status/:id",
+
   updateAppointmentStatus
 );
 
-
 // ============================================================
 // UPDATE PAYMENT STATUS
-// PUT /api/appointments/payment/:id
+// PUT
+// /api/appointments/payment/:id
 // ============================================================
 
 router.put(
   "/payment/:id",
+
   updatePaymentStatus
 );
 
-
 // ============================================================
 // START VIDEO CONSULTATION
-// PUT /api/appointments/start-consultation/:id
+// PUT
+// /api/appointments/start-consultation/:id
 // ============================================================
 
 router.put(
   "/start-consultation/:id",
+
   startConsultation
 );
 
-
 // ============================================================
 // JOIN VIDEO CONSULTATION
-// PUT /api/appointments/join/:id
+// PUT
+// /api/appointments/join/:id
 // ============================================================
 
 router.put(
   "/join/:id",
+
   joinConsultation
 );
 
-
 // ============================================================
-// COMPLETE CONSULTATION
-// PUT /api/appointments/complete/:id
+// COMPLETE VIDEO CONSULTATION
+// PUT
+// /api/appointments/complete/:id
 // ============================================================
 
 router.put(
   "/complete/:id",
+
   completeConsultation
 );
 
-
-// ============================================================
-// GET SINGLE APPOINTMENT
-// GET /api/appointments/:id
-// ============================================================
-
-router.get(
-  "/:id",
-  getAppointmentById
-);
-
-
 // ============================================================
 // DELETE APPOINTMENT
-// DELETE /api/appointments/:id
+// DELETE
+// /api/appointments/:id
 // ============================================================
 
 router.delete(
   "/:id",
+
   deleteAppointment
 );
 
+// ============================================================
+// GET SINGLE APPOINTMENT
+// GET
+// /api/appointments/:id
+//
+// Keep this AFTER all specific routes.
+// ============================================================
+
+router.get(
+  "/:id",
+
+  getAppointmentById
+);
+
+// ============================================================
+// EXPORT
+// ============================================================
 
 module.exports = router;
