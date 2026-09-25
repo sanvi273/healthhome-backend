@@ -12,6 +12,7 @@ const doctorRoutes = require("./routes/doctorRoutes");
 const labRoutes = require("./routes/labRoutes");
 const pharmacyRoutes = require("./routes/pharmacyRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
+const addressRoutes = require("./routes/addressRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const medicineRoutes = require("./routes/medicineRoutes");
 const orderRoutes = require("./routes/orderRoutes");
@@ -84,6 +85,11 @@ app.use(
 app.use(
   "/api/appointments",
   appointmentRoutes
+);
+
+app.use(
+  "/api/addresses", 
+  addressRoutes
 );
 
 app.use(

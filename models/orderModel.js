@@ -95,6 +95,32 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
 
+    // ========================================================
+    // DELIVERY PARTNER DETAILS
+    // ========================================================
+
+    deliveryAgentName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    deliveryAgentPhone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    deliveryAgentAssigned: {
+      type: Boolean,
+      default: false,
+    },
+
+    deliveryAgentAssignedAt: {
+      type: Date,
+      default: null,
+    },
+
     notes: {
       type: String,
       default: "",

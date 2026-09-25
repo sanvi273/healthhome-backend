@@ -7,6 +7,8 @@ const {
   getPharmacyOrders,
   getPatientOrders,
   updateOrderStatus,
+  assignDeliveryAgent,
+  removeDeliveryAgent,
   collectCODPayment,
   getAllOrders,
 } = require("../controllers/orderController");
@@ -68,10 +70,59 @@ router.get(
 // UPDATE ORDER STATUS
 // PUT /api/orders/status/:id
 // ============================================================
+//
+// Example:
+// {
+//   "status": "Accepted"
+// }
+//
+// Other statuses:
+// Pending
+// Accepted
+// Packed
+// Out for Delivery
+// Delivered
+// Rejected
+// Cancelled
+//
+// ============================================================
 
 router.put(
   "/status/:id",
   updateOrderStatus
+);
+
+// ============================================================
+// ASSIGN DELIVERY PARTNER
+// PUT /api/orders/delivery-agent/:id
+// ============================================================
+//
+// Request body:
+//
+// {
+//   "deliveryAgentName": "Rahul Patel",
+//   "deliveryAgentPhone": "9876543210"
+// }
+//
+// ============================================================
+
+router.put(
+  "/delivery-agent/:id",
+  assignDeliveryAgent
+);
+
+// ============================================================
+// REMOVE / CHANGE DELIVERY PARTNER
+// PUT /api/orders/delivery-agent/remove/:id
+// ============================================================
+//
+// This removes the currently assigned delivery partner.
+//
+// ============================================================
+
+router.put(
+  "/delivery-agent/remove/:id",
+  removeDeliveryAgent
 );
 
 // ============================================================

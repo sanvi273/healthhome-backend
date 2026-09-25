@@ -2,22 +2,60 @@ const User = require("../models/user");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-
 // ================= REGISTER USER =================
 
 const registerUser = async (req, res) => {
-
     try {
-
         const {
             name,
             email,
             password,
             role,
-            phone
+            phone,
+
+            // ADDRESS
+            label,
+            fullAddress,
+            landmark,
+            city,
+            state,
+            pincode,
+            latitude,
+            longitude,
         } = req.body;
 
-        // CHECK EMAIL EXISTS
+        // ================= VALIDATE REQUIRED FIELDS =================
+
+        if (
+            !name ||
+            !email ||
+            !password ||
+            !role ||
+            !phone
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Name, email, password, role and phone are required",
+            });
+        }
+
+        // ADDRESS IS REQUIRED
+        if (
+            !label ||
+            !fullAddress ||
+            !city ||
+            !state ||
+            !pincode
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Address is required. Please provide label, full address, city, state and pincode",
+            });
+        }
+
+        // ================= CHECK EMAIL EXISTS =================
+
         const emailExists = await User.findOne({ email });
 
         if (emailExists) {
@@ -27,7 +65,8 @@ const registerUser = async (req, res) => {
             });
         }
 
-        // CHECK PHONE EXISTS
+        // ================= CHECK PHONE EXISTS =================
+
         const phoneExists = await User.findOne({ phone });
 
         if (phoneExists) {
@@ -37,17 +76,42 @@ const registerUser = async (req, res) => {
             });
         }
 
-        // HASH PASSWORD
+        // ================= HASH PASSWORD =================
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // CREATE USER
+        // ================= CREATE USER =================
+
         const user = await User.create({
             name,
             email,
             password: hashedPassword,
             role,
             phone,
+
+            // ================= FIRST ADDRESS =================
+            addresses: [
+                {
+                    label,
+                    fullAddress,
+                    landmark: landmark || "",
+                    city,
+                    state,
+                    pincode,
+                    latitude:
+                        latitude !== undefined
+                            ? Number(latitude)
+                            : null,
+                    longitude:
+                        longitude !== undefined
+                            ? Number(longitude)
+                            : null,
+                    isDefault: true,
+                },
+            ],
         });
+
+        // ================= RESPONSE =================
 
         res.status(201).json({
             success: true,
@@ -57,11 +121,12 @@ const registerUser = async (req, res) => {
 
     } catch (error) {
 
+        console.error("REGISTER ERROR:", error);
+
         res.status(500).json({
             success: false,
             message: error.message,
         });
-
     }
 };
 
@@ -69,7 +134,6 @@ const registerUser = async (req, res) => {
 // ================= LOGIN USER =================
 
 const loginUser = async (req, res) => {
-
     try {
 
         const { phone, password } = req.body;
@@ -122,63 +186,46 @@ const loginUser = async (req, res) => {
             success: false,
             message: error.message,
         });
-
     }
 };
+
 
 // ================= UPDATE ONESIGNAL ID =================
 
 const updateOneSignalId = async (req, res) => {
-
     try {
 
         const { phone, oneSignalId } = req.body;
 
         const user = await User.findOneAndUpdate(
-
             { phone },
-
             {
                 oneSignalId: oneSignalId,
             },
-
             { new: true }
-
         );
 
         if (!user) {
-
             return res.status(404).json({
-
                 success: false,
-
                 message: "User not found",
-
             });
-
         }
 
         res.status(200).json({
-
             success: true,
-
             message: "OneSignal ID Updated",
-
         });
 
     } catch (error) {
 
         res.status(500).json({
-
             success: false,
-
             message: error.message,
-
         });
-
     }
-
 };
+
 
 // ================= EXPORTS =================
 

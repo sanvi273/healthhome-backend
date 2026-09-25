@@ -12,7 +12,10 @@ const placeOrder = async (req, res) => {
     console.log("==================================================");
     console.log("========== NEW MEDICINE ORDER ====================");
     console.log("==================================================");
-    console.log("REQUEST BODY =", JSON.stringify(req.body, null, 2));
+    console.log(
+      "REQUEST BODY =",
+      JSON.stringify(req.body, null, 2)
+    );
 
     const {
       patientId,
@@ -63,11 +66,17 @@ const placeOrder = async (req, res) => {
 
     let finalPaymentMethod = "COD";
 
-    if (paymentMethod === "ONLINE" || paymentMethod === "COD") {
+    if (
+      paymentMethod === "ONLINE" ||
+      paymentMethod === "COD"
+    ) {
       finalPaymentMethod = paymentMethod;
     }
 
-    console.log("PAYMENT METHOD =", finalPaymentMethod);
+    console.log(
+      "PAYMENT METHOD =",
+      finalPaymentMethod
+    );
 
     // ========================================================
     // PHARMACY VALIDATION
@@ -79,7 +88,10 @@ const placeOrder = async (req, res) => {
       try {
         pharmacy = await Pharmacy.findById(pharmacyId);
       } catch (error) {
-        console.log("INVALID PHARMACY ID =", pharmacyId);
+        console.log(
+          "INVALID PHARMACY ID =",
+          pharmacyId
+        );
 
         return res.status(400).json({
           success: false,
@@ -102,14 +114,26 @@ const placeOrder = async (req, res) => {
       });
     }
 
-    console.log("SELECTED PHARMACY ID =", pharmacy._id);
-    console.log("SELECTED PHARMACY NAME =", pharmacy.name);
-    console.log("SELECTED PHARMACY PHONE =", pharmacy.phone);
+    console.log(
+      "SELECTED PHARMACY ID =",
+      pharmacy._id
+    );
+
+    console.log(
+      "SELECTED PHARMACY NAME =",
+      pharmacy.name
+    );
+
+    console.log(
+      "SELECTED PHARMACY PHONE =",
+      pharmacy.phone
+    );
 
     if (pharmacy.available === false) {
       return res.status(400).json({
         success: false,
-        message: "This pharmacy is currently unavailable.",
+        message:
+          "This pharmacy is currently unavailable.",
       });
     }
 
@@ -122,9 +146,15 @@ const placeOrder = async (req, res) => {
     let subtotal = 0;
 
     console.log("");
-    console.log("==================================================");
-    console.log("========== VERIFYING MEDICINES ===================");
-    console.log("==================================================");
+    console.log(
+      "=================================================="
+    );
+    console.log(
+      "========== VERIFYING MEDICINES ==================="
+    );
+    console.log(
+      "=================================================="
+    );
 
     for (const item of medicines) {
       const medicineId = item.medicineId;
@@ -147,7 +177,8 @@ const placeOrder = async (req, res) => {
       ) {
         return res.status(400).json({
           success: false,
-          message: "Invalid medicine ID or quantity.",
+          message:
+            "Invalid medicine ID or quantity.",
         });
       }
 
@@ -158,36 +189,57 @@ const placeOrder = async (req, res) => {
       let medicine = null;
 
       try {
-        medicine = await Medicine.findById(medicineId);
+        medicine =
+          await Medicine.findById(medicineId);
       } catch (error) {
-        console.log("INVALID MEDICINE ID =", medicineId);
+        console.log(
+          "INVALID MEDICINE ID =",
+          medicineId
+        );
 
         return res.status(400).json({
           success: false,
-          message: `Invalid medicine ID: ${medicineId}`,
+          message:
+            `Invalid medicine ID: ${medicineId}`,
         });
       }
 
       if (!medicine) {
         return res.status(404).json({
           success: false,
-          message: `Medicine not found: ${medicineId}`,
+          message:
+            `Medicine not found: ${medicineId}`,
         });
       }
 
-      console.log("FOUND MEDICINE =", medicine.medicineName);
-      console.log("MONGO MEDICINE ID =", medicine._id);
-      console.log("MEDICINE PHARMACY PHONE =", medicine.pharmacyPhone);
-      console.log("MEDICINE PRICE =", medicine.price);
-      console.log("MEDICINE STOCK =", medicine.stock);
+      console.log(
+        "FOUND MEDICINE =",
+        medicine.medicineName
+      );
+
+      console.log(
+        "MONGO MEDICINE ID =",
+        medicine._id
+      );
+
+      console.log(
+        "MEDICINE PHARMACY PHONE =",
+        medicine.pharmacyPhone
+      );
+
+      console.log(
+        "MEDICINE PRICE =",
+        medicine.price
+      );
+
+      console.log(
+        "MEDICINE STOCK =",
+        medicine.stock
+      );
 
       // ------------------------------------------------------
       // Verify medicine belongs to selected pharmacy
       // ------------------------------------------------------
-      //
-      // Medicine model currently stores pharmacyPhone.
-      // Therefore selected pharmacy's phone must match.
-      //
 
       if (
         pharmacy.phone &&
@@ -195,7 +247,9 @@ const placeOrder = async (req, res) => {
         String(medicine.pharmacyPhone).trim() !==
           String(pharmacy.phone).trim()
       ) {
-        console.log("PHARMACY OWNERSHIP CHECK FAILED");
+        console.log(
+          "PHARMACY OWNERSHIP CHECK FAILED"
+        );
 
         return res.status(400).json({
           success: false,
@@ -217,7 +271,8 @@ const placeOrder = async (req, res) => {
       // Check stock
       // ------------------------------------------------------
 
-      const availableStock = Number(medicine.stock);
+      const availableStock =
+        Number(medicine.stock);
 
       if (
         !Number.isFinite(availableStock) ||
@@ -235,7 +290,8 @@ const placeOrder = async (req, res) => {
       // NEVER TRUST FLUTTER PRICE
       // ------------------------------------------------------
 
-      const actualPrice = Number(medicine.price);
+      const actualPrice =
+        Number(medicine.price);
 
       if (
         !Number.isFinite(actualPrice) ||
@@ -275,34 +331,66 @@ const placeOrder = async (req, res) => {
       subtotal += itemSubtotal;
 
       // ------------------------------------------------------
-      // IMPORTANT DEBUG LOG
+      // DEBUG LOG
       // ------------------------------------------------------
 
       console.log("");
-      console.log("========== MEDICINE PRICE CALCULATION ==========");
-      console.log("Medicine Name =", medicine.medicineName);
-      console.log("Medicine ID =", medicine._id);
-      console.log("Actual Price =", actualPrice);
-      console.log("Quantity =", quantity);
-      console.log("Item Subtotal =", itemSubtotal);
-      console.log("Current Subtotal =", subtotal);
-      console.log("===============================================");
+      console.log(
+        "========== MEDICINE PRICE CALCULATION =========="
+      );
+
+      console.log(
+        "Medicine Name =",
+        medicine.medicineName
+      );
+
+      console.log(
+        "Medicine ID =",
+        medicine._id
+      );
+
+      console.log(
+        "Actual Price =",
+        actualPrice
+      );
+
+      console.log(
+        "Quantity =",
+        quantity
+      );
+
+      console.log(
+        "Item Subtotal =",
+        itemSubtotal
+      );
+
+      console.log(
+        "Current Subtotal =",
+        subtotal
+      );
+
+      console.log(
+        "==============================================="
+      );
 
       // ------------------------------------------------------
       // Save verified medicine snapshot
       // ------------------------------------------------------
 
       verifiedMedicines.push({
-        medicineId: String(medicine._id),
+        medicineId:
+          String(medicine._id),
 
         medicineName:
           medicine.medicineName,
 
         quantity,
 
-        price: actualPrice,
+        price:
+          actualPrice,
 
-        subtotal: itemSubtotal,
+        subtotal:
+          itemSubtotal,
       });
     }
 
@@ -326,9 +414,16 @@ const placeOrder = async (req, res) => {
     }
 
     console.log("");
-    console.log("==================================================");
-    console.log("VERIFIED SUBTOTAL =", subtotal);
-    console.log("==================================================");
+    console.log(
+      "=================================================="
+    );
+    console.log(
+      "VERIFIED SUBTOTAL =",
+      subtotal
+    );
+    console.log(
+      "=================================================="
+    );
 
     // ========================================================
     // DELIVERY FEE
@@ -354,16 +449,40 @@ const placeOrder = async (req, res) => {
       deliveryFee -
       discount;
 
-    // IMPORTANT DEBUG LOG
     console.log("");
-    console.log("==================================================");
-    console.log("========== FINAL ORDER TOTAL =====================");
-    console.log("==================================================");
-    console.log("Subtotal =", subtotal);
-    console.log("Delivery Fee =", deliveryFee);
-    console.log("Discount =", discount);
-    console.log("FINAL TOTAL =", totalAmount);
-    console.log("==================================================");
+    console.log(
+      "=================================================="
+    );
+    console.log(
+      "========== FINAL ORDER TOTAL ====================="
+    );
+    console.log(
+      "=================================================="
+    );
+
+    console.log(
+      "Subtotal =",
+      subtotal
+    );
+
+    console.log(
+      "Delivery Fee =",
+      deliveryFee
+    );
+
+    console.log(
+      "Discount =",
+      discount
+    );
+
+    console.log(
+      "FINAL TOTAL =",
+      totalAmount
+    );
+
+    console.log(
+      "=================================================="
+    );
 
     // ========================================================
     // FINAL TOTAL VALIDATION
@@ -374,7 +493,7 @@ const placeOrder = async (req, res) => {
       totalAmount <= 0
     ) {
       console.log(
-        "❌ INVALID FINAL TOTAL =",
+        "INVALID FINAL TOTAL =",
         totalAmount
       );
 
@@ -399,15 +518,23 @@ const placeOrder = async (req, res) => {
       totalAmount - platformFee;
 
     console.log("");
-    console.log("PLATFORM FEE =", platformFee);
-    console.log("PHARMACY AMOUNT =", providerAmount);
+    console.log(
+      "PLATFORM FEE =",
+      platformFee
+    );
+
+    console.log(
+      "PHARMACY AMOUNT =",
+      providerAmount
+    );
 
     // ========================================================
     // CREATE ORDER
     // ========================================================
 
     const order = await Order.create({
-      patientId: patientId || "",
+      patientId:
+        patientId || "",
 
       patientName:
         String(patientName).trim(),
@@ -440,8 +567,6 @@ const placeOrder = async (req, res) => {
       medicines:
         verifiedMedicines,
 
-      // IMPORTANT:
-      // Store calculated values from backend.
       subtotal,
 
       deliveryFee,
@@ -455,13 +580,9 @@ const placeOrder = async (req, res) => {
       paymentMethod:
         finalPaymentMethod,
 
-      // Payment becomes Paid only
-      // after Razorpay verification.
       paymentStatus:
         "Pending",
 
-      // Razorpay IDs will be added
-      // by paymentController.
       razorpayOrderId: "",
 
       razorpayPaymentId: "",
@@ -470,7 +591,6 @@ const placeOrder = async (req, res) => {
 
       paymentRecordId: "",
 
-      // Settlement
       settlementStatus:
         "Pending",
 
@@ -480,12 +600,20 @@ const placeOrder = async (req, res) => {
 
       providerAmount,
 
-      // COD
       cashCollected: false,
 
       cashCollectedAt: null,
 
-      // Order
+      // New order starts without
+      // delivery partner
+      deliveryAgentName: "",
+
+      deliveryAgentPhone: "",
+
+      deliveryAgentAssigned: false,
+
+      deliveryAgentAssignedAt: null,
+
       status: "Pending",
     });
 
@@ -494,15 +622,44 @@ const placeOrder = async (req, res) => {
     // ========================================================
 
     console.log("");
-    console.log("==================================================");
-    console.log("========== ORDER CREATED SUCCESSFULLY ===========");
-    console.log("==================================================");
-    console.log("ORDER ID =", order._id);
-    console.log("ORDER SUBTOTAL =", order.subtotal);
-    console.log("ORDER TOTAL =", order.totalAmount);
-    console.log("PAYMENT METHOD =", order.paymentMethod);
-    console.log("PAYMENT STATUS =", order.paymentStatus);
-    console.log("==================================================");
+    console.log(
+      "=================================================="
+    );
+    console.log(
+      "========== ORDER CREATED SUCCESSFULLY ==========="
+    );
+    console.log(
+      "=================================================="
+    );
+
+    console.log(
+      "ORDER ID =",
+      order._id
+    );
+
+    console.log(
+      "ORDER SUBTOTAL =",
+      order.subtotal
+    );
+
+    console.log(
+      "ORDER TOTAL =",
+      order.totalAmount
+    );
+
+    console.log(
+      "PAYMENT METHOD =",
+      order.paymentMethod
+    );
+
+    console.log(
+      "PAYMENT STATUS =",
+      order.paymentStatus
+    );
+
+    console.log(
+      "=================================================="
+    );
 
     // ========================================================
     // RESPONSE
@@ -581,6 +738,18 @@ const placeOrder = async (req, res) => {
         cashCollected:
           order.cashCollected,
 
+        deliveryAgentName:
+          order.deliveryAgentName,
+
+        deliveryAgentPhone:
+          order.deliveryAgentPhone,
+
+        deliveryAgentAssigned:
+          order.deliveryAgentAssigned,
+
+        deliveryAgentAssignedAt:
+          order.deliveryAgentAssignedAt,
+
         status:
           order.status,
 
@@ -588,14 +757,23 @@ const placeOrder = async (req, res) => {
           order.createdAt,
       },
     });
-
   } catch (error) {
     console.error("");
-    console.error("==================================================");
-    console.error("❌ PLACE ORDER ERROR");
-    console.error("==================================================");
+    console.error(
+      "=================================================="
+    );
+    console.error(
+      "❌ PLACE ORDER ERROR"
+    );
+    console.error(
+      "=================================================="
+    );
+
     console.error(error);
-    console.error("==================================================");
+
+    console.error(
+      "=================================================="
+    );
 
     return res.status(500).json({
       success: false,
@@ -616,8 +794,14 @@ const getPharmacyOrders = async (req, res) => {
       req.params.pharmacyId;
 
     console.log("");
-    console.log("========== GET PHARMACY ORDERS ==========");
-    console.log("Pharmacy ID =", pharmacyId);
+    console.log(
+      "========== GET PHARMACY ORDERS =========="
+    );
+
+    console.log(
+      "Pharmacy ID =",
+      pharmacyId
+    );
 
     const orders =
       await Order.find({
@@ -634,7 +818,6 @@ const getPharmacyOrders = async (req, res) => {
 
       orders,
     });
-
   } catch (error) {
     console.error(
       "GET PHARMACY ORDERS ERROR:",
@@ -659,8 +842,14 @@ const getPatientOrders = async (req, res) => {
       req.params.phone;
 
     console.log("");
-    console.log("========== GET PATIENT ORDERS ==========");
-    console.log("Patient Phone =", phone);
+    console.log(
+      "========== GET PATIENT ORDERS =========="
+    );
+
+    console.log(
+      "Patient Phone =",
+      phone
+    );
 
     const orders =
       await Order.find({
@@ -677,7 +866,6 @@ const getPatientOrders = async (req, res) => {
 
       orders,
     });
-
   } catch (error) {
     console.error(
       "GET PATIENT ORDERS ERROR:",
@@ -736,13 +924,29 @@ const updateOrderStatus = async (req, res) => {
     }
 
     // ========================================================
+    // DELIVERY PARTNER VALIDATION
+    // ========================================================
+
+    // An order cannot go Out for Delivery
+    // unless a delivery partner has been assigned.
+
+    if (
+      status === "Out for Delivery" &&
+      !order.deliveryAgentAssigned
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Please assign a delivery partner before dispatching the order.",
+      });
+    }
+
+    // ========================================================
     // COD DELIVERY
     // ========================================================
 
     // When COD order becomes Delivered,
     // we DO NOT automatically assume cash was collected.
-    //
-    // Cash collection must be explicitly confirmed.
 
     if (
       status === "Delivered" &&
@@ -770,6 +974,17 @@ const updateOrderStatus = async (req, res) => {
         "";
     }
 
+    // ========================================================
+    // REJECTION
+    // ========================================================
+
+    if (status === "Rejected") {
+      order.deliveryAgentName = "";
+      order.deliveryAgentPhone = "";
+      order.deliveryAgentAssigned = false;
+      order.deliveryAgentAssignedAt = null;
+    }
+
     await order.save();
 
     return res.status(200).json({
@@ -780,7 +995,6 @@ const updateOrderStatus = async (req, res) => {
 
       order,
     });
-
   } catch (error) {
     console.error(
       "UPDATE ORDER STATUS ERROR:",
@@ -791,6 +1005,238 @@ const updateOrderStatus = async (req, res) => {
       success: false,
       message:
         error.message,
+    });
+  }
+};
+
+// ============================================================
+// ASSIGN DELIVERY PARTNER
+// ============================================================
+
+const assignDeliveryAgent = async (req, res) => {
+  try {
+    const {
+      deliveryAgentName,
+      deliveryAgentPhone,
+    } = req.body;
+
+    console.log("");
+    console.log(
+      "=================================================="
+    );
+    console.log(
+      "========== ASSIGN DELIVERY PARTNER ==============="
+    );
+    console.log(
+      "=================================================="
+    );
+
+    console.log(
+      "ORDER ID =",
+      req.params.id
+    );
+
+    console.log(
+      "DELIVERY AGENT NAME =",
+      deliveryAgentName
+    );
+
+    console.log(
+      "DELIVERY AGENT PHONE =",
+      deliveryAgentPhone
+    );
+
+    // ========================================================
+    // VALIDATION
+    // ========================================================
+
+    if (
+      !deliveryAgentName ||
+      !String(deliveryAgentName).trim()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Delivery partner name is required.",
+      });
+    }
+
+    if (
+      !deliveryAgentPhone ||
+      !String(deliveryAgentPhone).trim()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Delivery partner phone is required.",
+      });
+    }
+
+    // ========================================================
+    // FIND ORDER
+    // ========================================================
+
+    const order =
+      await Order.findById(
+        req.params.id
+      );
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Order not found.",
+      });
+    }
+
+    // ========================================================
+    // ORDER STATUS CHECK
+    // ========================================================
+
+    // Delivery partner can be assigned only
+    // after pharmacy accepts the order.
+
+    if (
+      order.status !== "Accepted" &&
+      order.status !== "Packed"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Delivery partner can only be assigned after the order is accepted.",
+      });
+    }
+
+    // ========================================================
+    // SAVE DELIVERY PARTNER
+    // ========================================================
+
+    order.deliveryAgentName =
+      String(
+        deliveryAgentName
+      ).trim();
+
+    order.deliveryAgentPhone =
+      String(
+        deliveryAgentPhone
+      ).trim();
+
+    order.deliveryAgentAssigned =
+      true;
+
+    order.deliveryAgentAssignedAt =
+      new Date();
+
+    await order.save();
+
+    // ========================================================
+    // SUCCESS
+    // ========================================================
+
+    console.log("");
+    console.log(
+      "DELIVERY PARTNER ASSIGNED SUCCESSFULLY"
+    );
+
+    console.log(
+      "ORDER ID =",
+      order._id
+    );
+
+    console.log(
+      "AGENT NAME =",
+      order.deliveryAgentName
+    );
+
+    console.log(
+      "AGENT PHONE =",
+      order.deliveryAgentPhone
+    );
+
+    console.log(
+      "=================================================="
+    );
+
+    return res.status(200).json({
+      success: true,
+
+      message:
+        "Delivery partner assigned successfully.",
+
+      order,
+    });
+  } catch (error) {
+    console.error("");
+    console.error(
+      "ASSIGN DELIVERY PARTNER ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        "Unable to assign delivery partner.",
+    });
+  }
+};
+
+// ============================================================
+// REMOVE / CHANGE DELIVERY PARTNER
+// ============================================================
+
+const removeDeliveryAgent = async (req, res) => {
+  try {
+    const order =
+      await Order.findById(
+        req.params.id
+      );
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Order not found.",
+      });
+    }
+
+    // Do not allow removal after delivery
+    if (
+      order.status === "Delivered"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Delivery partner cannot be removed after the order is delivered.",
+      });
+    }
+
+    order.deliveryAgentName = "";
+    order.deliveryAgentPhone = "";
+    order.deliveryAgentAssigned = false;
+    order.deliveryAgentAssignedAt = null;
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+
+      message:
+        "Delivery partner removed successfully.",
+
+      order,
+    });
+  } catch (error) {
+    console.error(
+      "REMOVE DELIVERY PARTNER ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        "Unable to remove delivery partner.",
     });
   }
 };
@@ -888,11 +1334,28 @@ const collectCODPayment = async (
     await order.save();
 
     console.log("");
-    console.log("========== COD PAYMENT COLLECTED ==========");
-    console.log("Order ID =", order._id);
-    console.log("Amount =", order.totalAmount);
-    console.log("Pharmacy =", order.pharmacyName);
-    console.log("==========================================");
+    console.log(
+      "========== COD PAYMENT COLLECTED =========="
+    );
+
+    console.log(
+      "Order ID =",
+      order._id
+    );
+
+    console.log(
+      "Amount =",
+      order.totalAmount
+    );
+
+    console.log(
+      "Pharmacy =",
+      order.pharmacyName
+    );
+
+    console.log(
+      "=========================================="
+    );
 
     return res.status(200).json({
       success: true,
@@ -902,7 +1365,6 @@ const collectCODPayment = async (
 
       order,
     });
-
   } catch (error) {
     console.error(
       "COLLECT COD PAYMENT ERROR:",
@@ -936,7 +1398,6 @@ const getAllOrders = async (req, res) => {
 
       orders,
     });
-
   } catch (error) {
     console.error(
       "GET ALL ORDERS ERROR:",
@@ -963,6 +1424,10 @@ module.exports = {
   getPatientOrders,
 
   updateOrderStatus,
+
+  assignDeliveryAgent,
+
+  removeDeliveryAgent,
 
   collectCODPayment,
 
