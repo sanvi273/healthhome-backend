@@ -886,9 +886,7 @@ const getPatientOrders = async (req, res) => {
 
 const updateOrderStatus = async (req, res) => {
   try {
-    const {
-      status,
-    } = req.body;
+    const { status } = req.body;
 
     const allowedStatuses = [
       "Pending",
@@ -900,35 +898,158 @@ const updateOrderStatus = async (req, res) => {
       "Cancelled",
     ];
 
-    if (
-      !allowedStatuses.includes(status)
-    ) {
+    if (!allowedStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message:
-          "Invalid order status.",
+        message: "Invalid order status.",
       });
     }
 
-    const order =
-      await Order.findById(
-        req.params.id
-      );
+    // ========================================================
+    // FIND ORDER
+    // ========================================================
+
+    const order = await Order.findById(req.params.id);
 
     if (!order) {
       return res.status(404).json({
         success: false,
-        message:
-          "Order not found.",
+        message: "Order not found.",
       });
+    }
+
+    // ========================================================
+    // REPAIR OLD ORDERS
+    // ========================================================
+    //
+    // Older orders were created before medicine subtotal
+    // became mandatory.
+    //
+    // Example old medicine:
+    //
+    // {
+    //   medicineId: "...",
+    //   quantity: 1,
+    //   price: 70
+    // }
+    //
+    // New schema requires:
+    //
+    // subtotal: 70
+    //
+    // So repair missing subtotals before saving.
+    // ========================================================
+
+    let calculatedSubtotal = 0;
+
+    if (
+      Array.isArray(order.medicines) &&
+      order.medicines.length > 0
+    ) {
+      for (const item of order.medicines) {
+        const quantity =
+          Number(item.quantity) || 1;
+
+        let price =
+          Number(item.price) || 0;
+
+        // ----------------------------------------------------
+        // If old order does not contain price,
+        // find current medicine price from MongoDB.
+        // ----------------------------------------------------
+
+        if (
+          (!Number.isFinite(price) || price <= 0) &&
+          item.medicineId
+        ) {
+          try {
+            const medicine =
+              await Medicine.findById(
+                item.medicineId
+              );
+
+            if (medicine) {
+              price =
+                Number(medicine.price) || 0;
+            }
+          } catch (error) {
+            console.log(
+              "Unable to lookup old medicine price:",
+              error.message
+            );
+          }
+        }
+
+        // ----------------------------------------------------
+        // Calculate subtotal
+        // ----------------------------------------------------
+
+        const itemSubtotal =
+          price * quantity;
+
+        // ----------------------------------------------------
+        // Update missing/invalid subtotal
+        // ----------------------------------------------------
+
+        if (
+          !Number.isFinite(
+            Number(item.subtotal)
+          ) ||
+          Number(item.subtotal) <= 0
+        ) {
+          item.subtotal =
+            itemSubtotal;
+        }
+
+        // If old price is missing, repair it too.
+        if (
+          (!Number.isFinite(
+            Number(item.price)
+          ) ||
+            Number(item.price) <= 0) &&
+          price > 0
+        ) {
+          item.price = price;
+        }
+
+        calculatedSubtotal +=
+          itemSubtotal;
+      }
+    }
+
+    // ========================================================
+    // REPAIR ORDER TOTAL
+    // ========================================================
+
+    if (
+      calculatedSubtotal > 0
+    ) {
+      order.subtotal =
+        calculatedSubtotal;
+
+      const deliveryFee =
+        Number(order.deliveryFee) || 0;
+
+      const discount =
+        Number(order.discount) || 0;
+
+      order.totalAmount =
+        calculatedSubtotal +
+        deliveryFee -
+        discount;
+
+      // Platform fee
+      const platformFee =
+        Number(order.platformFee) || 0;
+
+      order.providerAmount =
+        order.totalAmount -
+        platformFee;
     }
 
     // ========================================================
     // DELIVERY PARTNER VALIDATION
     // ========================================================
-
-    // An order cannot go Out for Delivery
-    // unless a delivery partner has been assigned.
 
     if (
       status === "Out for Delivery" &&
@@ -937,16 +1058,13 @@ const updateOrderStatus = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          "Please assign a delivery partner before dispatching the order.",
+          "Delivery partner must be assigned before the order goes Out for Delivery.",
       });
     }
 
     // ========================================================
     // COD DELIVERY
     // ========================================================
-
-    // When COD order becomes Delivered,
-    // we DO NOT automatically assume cash was collected.
 
     if (
       status === "Delivered" &&
@@ -958,8 +1076,11 @@ const updateOrderStatus = async (req, res) => {
       );
     }
 
-    order.status =
-      status;
+    // ========================================================
+    // UPDATE STATUS
+    // ========================================================
+
+    order.status = status;
 
     // ========================================================
     // CANCELLATION
@@ -970,22 +1091,41 @@ const updateOrderStatus = async (req, res) => {
         new Date();
 
       order.cancellationReason =
-        req.body.reason ||
-        "";
+        req.body.reason || "";
     }
 
     // ========================================================
-    // REJECTION
+    // SAVE
     // ========================================================
-
-    if (status === "Rejected") {
-      order.deliveryAgentName = "";
-      order.deliveryAgentPhone = "";
-      order.deliveryAgentAssigned = false;
-      order.deliveryAgentAssignedAt = null;
-    }
 
     await order.save();
+
+    console.log("");
+    console.log(
+      "=============================================="
+    );
+    console.log(
+      "ORDER STATUS UPDATED"
+    );
+    console.log(
+      "ORDER ID =",
+      order._id
+    );
+    console.log(
+      "STATUS =",
+      order.status
+    );
+    console.log(
+      "SUBTOTAL =",
+      order.subtotal
+    );
+    console.log(
+      "TOTAL =",
+      order.totalAmount
+    );
+    console.log(
+      "=============================================="
+    );
 
     return res.status(200).json({
       success: true,
@@ -995,6 +1135,7 @@ const updateOrderStatus = async (req, res) => {
 
       order,
     });
+
   } catch (error) {
     console.error(
       "UPDATE ORDER STATUS ERROR:",
@@ -1004,10 +1145,12 @@ const updateOrderStatus = async (req, res) => {
     return res.status(500).json({
       success: false,
       message:
-        error.message,
+        error.message ||
+        "Unable to update order status.",
     });
   }
 };
+
 
 // ============================================================
 // ASSIGN DELIVERY PARTNER
