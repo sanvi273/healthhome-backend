@@ -6,15 +6,24 @@ const {
   addLab,
   getLabs,
   getLabProfile,
-} = require("../controllers/labController");
 
+  // ================= LAB TEST MANAGEMENT =================
+  addLabTest,
+  getAllLabTests,
+  getLabTestsByLab,
+  updateLabTest,
+  deleteLabTest,
+  toggleLabTest,
+} = require("../controllers/labController");
 
 // ================= TEST =================
 
-router.get("/test", (req, res) => {
-  res.send("Lab route working");
-});
-
+router.get(
+  "/test",
+  (req, res) => {
+    res.send("Lab route working");
+  }
+);
 
 // ================= ADD LAB =================
 
@@ -23,14 +32,12 @@ router.post(
   addLab
 );
 
-
 // ================= GET ALL LABS =================
 
 router.get(
   "/all",
   getLabs
 );
-
 
 // ================= GET LAB PROFILE BY PHONE =================
 
@@ -39,5 +46,56 @@ router.get(
   getLabProfile
 );
 
+// ============================================================
+// LAB TEST MANAGEMENT
+// ============================================================
+
+// ADD LAB TEST
+// POST /api/labs/tests/add
+
+router.post(
+  "/tests/add",
+  addLabTest
+);
+
+// GET ALL LAB TESTS
+// GET /api/labs/tests/all
+
+router.get(
+  "/tests/all",
+  getAllLabTests
+);
+
+// GET LAB TESTS BY LAB
+// GET /api/labs/tests/lab/:labId
+
+router.get(
+  "/tests/lab/:labId",
+  getLabTestsByLab
+);
+
+// UPDATE LAB TEST
+// PUT /api/labs/tests/:id
+
+router.put(
+  "/tests/:id",
+  updateLabTest
+);
+
+// DELETE LAB TEST
+// DELETE /api/labs/tests/:id
+
+router.delete(
+  "/tests/:id",
+  deleteLabTest
+);
+
+// ENABLE / DISABLE LAB TEST
+// PUT /api/labs/tests/toggle/:id
+
+router.put(
+  "/tests/toggle/:id",
+  toggleLabTest
+);
 
 module.exports = router;

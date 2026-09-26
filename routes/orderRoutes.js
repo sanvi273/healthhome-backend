@@ -4,6 +4,8 @@ const router = express.Router();
 
 const {
   placeOrder,
+  placePrescriptionOrder,
+  confirmPrescriptionOrder,
   getPharmacyOrders,
   getPatientOrders,
   updateOrderStatus,
@@ -13,8 +15,6 @@ const {
   getAllOrders,
 } = require("../controllers/orderController");
 
-console.log("✅ orderRoutes.js loaded");
-
 // ============================================================
 // TEST
 // ============================================================
@@ -22,33 +22,69 @@ console.log("✅ orderRoutes.js loaded");
 router.get("/test", (req, res) => {
   res.json({
     success: true,
-    message: "Order routes working",
+    message: "Order API working",
   });
 });
 
 // ============================================================
-// PLACE MEDICINE ORDER
-// POST /api/orders/place
+// NORMAL MEDICINE ORDER
+// ============================================================
+//
+// Patient selects medicines
+//        ↓
+// Backend verifies medicine prices
+//        ↓
+// Creates MEDICINE order
+//
 // ============================================================
 
-router.post(
-  "/place",
-  placeOrder
+router.post("/place", placeOrder);
+
+// ============================================================
+// PRESCRIPTION IMAGE ORDER
+// ============================================================
+//
+// Patient uploads prescription
+//        ↓
+// Creates PRESCRIPTION order
+//        ↓
+// Initial amount = ₹0
+//        ↓
+// Pharmacy confirms medicines
+//
+// ============================================================
+
+router.post("/prescription", placePrescriptionOrder);
+
+// ============================================================
+// CONFIRM PRESCRIPTION ORDER
+// ============================================================
+//
+// Pharmacy checks prescription
+//        ↓
+// Selects medicines
+//        ↓
+// Backend gets real prices from MongoDB
+//        ↓
+// Calculates final amount
+//        ↓
+// Order becomes Accepted
+//
+// ============================================================
+
+router.put(
+  "/prescription/confirm/:id",
+  confirmPrescriptionOrder
 );
 
 // ============================================================
 // GET ALL ORDERS
-// GET /api/orders/all
 // ============================================================
 
-router.get(
-  "/all",
-  getAllOrders
-);
+router.get("/all", getAllOrders);
 
 // ============================================================
-// PHARMACY ORDERS
-// GET /api/orders/pharmacy/:pharmacyId
+// GET PHARMACY ORDERS
 // ============================================================
 
 router.get(
@@ -57,8 +93,7 @@ router.get(
 );
 
 // ============================================================
-// PATIENT ORDERS
-// GET /api/orders/patient/:phone
+// GET PATIENT ORDERS
 // ============================================================
 
 router.get(
@@ -68,22 +103,14 @@ router.get(
 
 // ============================================================
 // UPDATE ORDER STATUS
-// PUT /api/orders/status/:id
 // ============================================================
 //
-// Example:
-// {
-//   "status": "Accepted"
-// }
-//
-// Other statuses:
 // Pending
 // Accepted
 // Packed
 // Out for Delivery
 // Delivered
 // Rejected
-// Cancelled
 //
 // ============================================================
 
@@ -94,16 +121,6 @@ router.put(
 
 // ============================================================
 // ASSIGN DELIVERY PARTNER
-// PUT /api/orders/delivery-agent/:id
-// ============================================================
-//
-// Request body:
-//
-// {
-//   "deliveryAgentName": "Rahul Patel",
-//   "deliveryAgentPhone": "9876543210"
-// }
-//
 // ============================================================
 
 router.put(
@@ -112,12 +129,7 @@ router.put(
 );
 
 // ============================================================
-// REMOVE / CHANGE DELIVERY PARTNER
-// PUT /api/orders/delivery-agent/remove/:id
-// ============================================================
-//
-// This removes the currently assigned delivery partner.
-//
+// REMOVE DELIVERY PARTNER
 // ============================================================
 
 router.put(
@@ -127,10 +139,6 @@ router.put(
 
 // ============================================================
 // COLLECT COD PAYMENT
-//
-// PUT /api/orders/cod/collect/:id
-//
-// This is used when the delivery/cash collection is completed.
 // ============================================================
 
 router.put(
@@ -139,7 +147,7 @@ router.put(
 );
 
 // ============================================================
-// EXPORT ROUTER
+// EXPORT
 // ============================================================
 
 module.exports = router;
