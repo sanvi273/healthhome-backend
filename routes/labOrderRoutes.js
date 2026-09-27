@@ -6,7 +6,6 @@ const {
   addLabOrder,
   getLabOrders,
   getLabOrderById,
-  updateLabOrderStatus,
   acceptLabOrder,
   rejectLabOrder,
   assignSampleCollector,
@@ -14,128 +13,62 @@ const {
   markSampleCollected,
   markSampleReceived,
   startTesting,
+  updateLabOrderStatus,
   uploadReport,
 } = require("../controllers/labOrderController");
 
+// Health check
+router.get("/test", (req, res) => {
+  res.send("Lab order route working");
+});
 
-// ============================================================
-// ADD LAB ORDER
-// ============================================================
+// Patient creates booking
+router.post("/add", addLabOrder);
 
-router.post(
-  "/add",
-  addLabOrder
-);
+// Existing dashboard list
+router.get("/all", getLabOrders);
 
+// Patient/lab can fetch a specific booking
+router.get("/:id", getLabOrderById);
 
-// ============================================================
-// GET ALL LAB ORDERS
-// ============================================================
-
-router.get(
-  "/all",
-  getLabOrders
-);
-
-
-// ============================================================
-// GET SINGLE LAB ORDER
-// ============================================================
-
-router.get(
-  "/:id",
-  getLabOrderById
-);
-
-
-// ============================================================
-// ACCEPT BOOKING
-// ============================================================
+// Laboratory workflow
+router.put("/accept/:id", acceptLabOrder);
+router.put("/reject/:id", rejectLabOrder);
 
 router.put(
-  "/accept/:id",
-  acceptLabOrder
-);
-
-
-// ============================================================
-// REJECT BOOKING
-// ============================================================
-
-router.put(
-  "/reject/:id",
-  rejectLabOrder
-);
-
-
-// ============================================================
-// ASSIGN SAMPLE COLLECTOR
-// ============================================================
-
-router.put(
-  "/collector/:id",
+  "/assign-collector/:id",
   assignSampleCollector
 );
 
-
-// ============================================================
-// COLLECTOR ON THE WAY
-// ============================================================
-
 router.put(
-  "/collector-on-way/:id",
+  "/collector-on-the-way/:id",
   collectorOnTheWay
 );
-
-
-// ============================================================
-// SAMPLE COLLECTED
-// ============================================================
 
 router.put(
   "/sample-collected/:id",
   markSampleCollected
 );
 
-
-// ============================================================
-// SAMPLE RECEIVED
-// ============================================================
-
 router.put(
   "/sample-received/:id",
   markSampleReceived
 );
-
-
-// ============================================================
-// START TESTING
-// ============================================================
 
 router.put(
   "/start-testing/:id",
   startTesting
 );
 
-
-// ============================================================
-// GENERAL STATUS UPDATE
-// ============================================================
-
 router.put(
   "/status/:id",
   updateLabOrderStatus
 );
 
-
-// ============================================================
-// UPLOAD REPORT
-// ============================================================
-
+// Lab uploads completed reports
 router.put(
   "/report/:id",
   uploadReport
 );
-
 
 module.exports = router;

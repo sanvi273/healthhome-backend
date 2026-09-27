@@ -5,6 +5,7 @@ const SampleCollector = require("../models/sampleCollector");
 // ADD LAB ORDER
 // ============================================================
 
+
 const addLabOrder = async (req, res) => {
   try {
     const {
@@ -19,67 +20,228 @@ const addLabOrder = async (req, res) => {
       notes,
       prescriptionImage,
       collectionMode,
+      bookingType,
     } = req.body;
 
     // --------------------------------------------------------
-    // VALIDATION
+    // BASIC VALIDATION
     // --------------------------------------------------------
-
     if (!patientId || !patientName) {
       return res.status(400).json({
         success: false,
-        message: "Patient information is required",
+        message: "Patient information is required.",
       });
     }
 
-    if (!labId || !labName) {
+    if (!labId) {
       return res.status(400).json({
         success: false,
-        message: "Laboratory information is required",
+        message: "Laboratory ID is required.",
       });
     }
+
+    // --------------------------------------------------------
+    // LOAD THE REAL LAB FROM DATABASE
+    // Never trust labName or test prices sent by Flutter.
+    // --------------------------------------------------------
+    const Lab = require("../models/lab");
+
+    const lab = await Lab.findById(labId);
+
+    if (!lab) {
+      return res.status(404).json({
+        success: false,
+        message: "Laboratory not found.",
+      });
+    }
+
+    if (lab.available === false) {
+      return res.status(400).json({
+        success: false,
+        message: "This laboratory is currently unavailable.",
+      });
+    }
+
+    // --------------------------------------------------------
+    // BOOKING TYPE
+    //
+    // TEST        = normal selected-test booking
+    // PRESCRIPTION = quick prescription booking
+    // --------------------------------------------------------
+    const finalBookingType =
+      String(bookingType || "TEST").toUpperCase() === "PRESCRIPTION"
+        ? "PRESCRIPTION"
+        : "TEST";
 
     // --------------------------------------------------------
     // COLLECTION MODE
     // --------------------------------------------------------
-
     const finalCollectionMode =
       collectionMode === "Visit Laboratory"
         ? "Visit Laboratory"
         : "Home Collection";
 
-    // --------------------------------------------------------
-    // CREATE ORDER
-    // --------------------------------------------------------
+    if (
+      finalCollectionMode === "Home Collection" &&
+      !String(address || "").trim()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Home collection address is required.",
+      });
+    }
 
+    // --------------------------------------------------------
+    // PRESCRIPTION BOOKING
+    //
+    // The ₹500 shown in the current app must NOT come from
+    // Flutter. Configure the real amount in:
+    //
+    // LAB_PRESCRIPTION_FEE=500
+    //
+    // in backend .env.
+    // --------------------------------------------------------
+    if (finalBookingType === "PRESCRIPTION") {
+      if (!String(prescriptionImage || "").trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Prescription image is required.",
+        });
+      }
+    }
+
+    // --------------------------------------------------------
+    // NORMAL TEST BOOKING
+    //
+    // Prices are calculated ONLY from lab.tests in MongoDB.
+    // --------------------------------------------------------
+    const requestedTests = Array.isArray(tests)
+      ? tests
+          .map((test) => String(test || "").trim())
+          .filter(Boolean)
+      : [];
+
+    const uniqueTestNames = [
+      ...new Set(
+        requestedTests.map((name) => name.toLowerCase())
+      ),
+    ];
+
+    let finalTests = [];
+    let totalAmount = 0;
+
+    if (finalBookingType === "TEST") {
+      if (uniqueTestNames.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select at least one lab test.",
+        });
+      }
+
+      const activeTests = Array.isArray(lab.tests)
+        ? lab.tests.filter(
+            (test) => test.isActive !== false
+          )
+        : [];
+
+      const matchedTests = [];
+
+      for (const requestedLower of uniqueTestNames) {
+        const found = activeTests.find(
+          (test) =>
+            String(test.testName || "")
+              .trim()
+              .toLowerCase() === requestedLower
+        );
+
+        if (!found) {
+          return res.status(400).json({
+            success: false,
+            message:
+              `The selected test "${requestedLower}" is not available at this laboratory.`,
+          });
+        }
+
+        const price = Number(found.price);
+
+        if (!Number.isFinite(price) || price < 0) {
+          return res.status(400).json({
+            success: false,
+            message:
+              `Invalid price configured for lab test "${found.testName}".`,
+          });
+        }
+
+        matchedTests.push(found);
+        totalAmount += price;
+      }
+
+      finalTests = matchedTests.map(
+        (test) => String(test.testName).trim()
+      );
+    } else {
+      // Server-controlled prescription booking fee.
+      const prescriptionFee =
+        Number(process.env.LAB_PRESCRIPTION_FEE || 500);
+
+      if (
+        !Number.isFinite(prescriptionFee) ||
+        prescriptionFee <= 0
+      ) {
+        return res.status(500).json({
+          success: false,
+          message:
+            "LAB_PRESCRIPTION_FEE is not configured correctly.",
+        });
+      }
+
+      totalAmount = prescriptionFee;
+      finalTests = [];
+    }
+
+    // --------------------------------------------------------
+    // CREATE PENDING PAYMENT BOOKING
+    //
+    // IMPORTANT:
+    // Booking status stays Pending until the laboratory accepts
+    // it. Payment status becomes Paid only after Razorpay
+    // verification.
+    // --------------------------------------------------------
     const order = await LabOrder.create({
-      patientId,
-      patientName,
-      patientPhone: patientPhone || "",
-      doctorName: doctorName || "",
+      patientId: String(patientId).trim(),
+      patientName: String(patientName).trim(),
+      patientPhone: String(patientPhone || "").trim(),
+      doctorName: String(doctorName || "").trim(),
 
-      tests: Array.isArray(tests)
-        ? tests
-        : [],
+      bookingType: finalBookingType,
 
-      labId,
-      labName,
+      tests: finalTests,
 
-      address: address || "",
-      notes: notes || "",
+      labId: String(lab._id),
+      labName: String(lab.name || ""),
+
+      address: String(address || "").trim(),
+      notes: String(notes || "").trim(),
+
+      totalAmount,
+
+      paymentStatus: "Pending",
+      razorpayOrderId: "",
+      razorpayPaymentId: "",
+      razorpaySignature: "",
+      paymentRecordId: "",
 
       prescriptionImage:
-        prescriptionImage || "",
+        String(prescriptionImage || "").trim(),
 
-      collectionMode:
-        finalCollectionMode,
-
-      status: "Pending",
+      collectionMode: finalCollectionMode,
 
       collectorId: "",
       collectorName: "",
       collectorPhone: "",
       collectorStatus: "Not Assigned",
+
+      status: "Pending",
 
       reports: [],
       reportUploadedAt: null,
@@ -90,28 +252,27 @@ const addLabOrder = async (req, res) => {
     console.log("ORDER ID =", order._id);
     console.log("PATIENT =", order.patientName);
     console.log("LAB =", order.labName);
-    console.log(
-      "COLLECTION MODE =",
-      order.collectionMode
-    );
+    console.log("BOOKING TYPE =", order.bookingType);
+    console.log("TESTS =", order.tests);
+    console.log("TOTAL AMOUNT =", order.totalAmount);
+    console.log("PAYMENT STATUS =", order.paymentStatus);
+    console.log("COLLECTION MODE =", order.collectionMode);
     console.log("STATUS =", order.status);
     console.log("================================");
 
     return res.status(201).json({
       success: true,
-      message: "Lab order created successfully",
+      message:
+        "Lab booking created. Payment is required before laboratory processing.",
       order,
     });
-
   } catch (error) {
-    console.error(
-      "ADD LAB ORDER ERROR:",
-      error
-    );
+    console.error("ADD LAB ORDER ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message:
+        error?.message || "Unable to create lab booking.",
     });
   }
 };
