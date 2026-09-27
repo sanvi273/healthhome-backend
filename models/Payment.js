@@ -155,7 +155,7 @@ const paymentSchema = new mongoose.Schema(
 
     // ============================================================
     // PROVIDER
-    // Doctor / Lab / Pharmacy
+    // Doctor / Laboratory / Pharmacy
     // ============================================================
 
     providerId: {
@@ -168,6 +168,7 @@ const paymentSchema = new mongoose.Schema(
       enum: [
         "Doctor",
         "Lab",
+        "Laboratory",
         "Pharmacy",
         "",
       ],
