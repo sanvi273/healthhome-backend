@@ -5,7 +5,6 @@ const SampleCollector = require("../models/sampleCollector");
 // ADD LAB ORDER
 // ============================================================
 
-
 const addLabOrder = async (req, res) => {
   try {
     const {
@@ -26,6 +25,7 @@ const addLabOrder = async (req, res) => {
     // --------------------------------------------------------
     // BASIC VALIDATION
     // --------------------------------------------------------
+
     if (!patientId || !patientName) {
       return res.status(400).json({
         success: false,
@@ -41,9 +41,9 @@ const addLabOrder = async (req, res) => {
     }
 
     // --------------------------------------------------------
-    // LOAD THE REAL LAB FROM DATABASE
-    // Never trust labName or test prices sent by Flutter.
+    // LOAD REAL LAB FROM DATABASE
     // --------------------------------------------------------
+
     const Lab = require("../models/lab");
 
     const lab = await Lab.findById(labId);
@@ -65,9 +65,10 @@ const addLabOrder = async (req, res) => {
     // --------------------------------------------------------
     // BOOKING TYPE
     //
-    // TEST        = normal selected-test booking
-    // PRESCRIPTION = quick prescription booking
+    // TEST         = normal selected-test booking
+    // PRESCRIPTION = prescription-based booking
     // --------------------------------------------------------
+
     const finalBookingType =
       String(bookingType || "TEST").toUpperCase() === "PRESCRIPTION"
         ? "PRESCRIPTION"
@@ -76,6 +77,7 @@ const addLabOrder = async (req, res) => {
     // --------------------------------------------------------
     // COLLECTION MODE
     // --------------------------------------------------------
+
     const finalCollectionMode =
       collectionMode === "Visit Laboratory"
         ? "Visit Laboratory"
@@ -94,13 +96,18 @@ const addLabOrder = async (req, res) => {
     // --------------------------------------------------------
     // PRESCRIPTION BOOKING
     //
-    // The ₹500 shown in the current app must NOT come from
-    // Flutter. Configure the real amount in:
+    // IMPORTANT:
+    // NO ₹500 FEE HERE.
     //
-    // LAB_PRESCRIPTION_FEE=500
+    // The patient only uploads the prescription.
+    // The laboratory will review it and determine:
     //
-    // in backend .env.
+    // 1. Required tests
+    // 2. Final amount
+    //
+    // Payment will happen when the sample is collected.
     // --------------------------------------------------------
+
     if (finalBookingType === "PRESCRIPTION") {
       if (!String(prescriptionImage || "").trim()) {
         return res.status(400).json({
@@ -115,6 +122,7 @@ const addLabOrder = async (req, res) => {
     //
     // Prices are calculated ONLY from lab.tests in MongoDB.
     // --------------------------------------------------------
+
     const requestedTests = Array.isArray(tests)
       ? tests
           .map((test) => String(test || "").trim())
@@ -129,6 +137,10 @@ const addLabOrder = async (req, res) => {
 
     let finalTests = [];
     let totalAmount = 0;
+
+    // --------------------------------------------------------
+    // NORMAL TEST BOOKING
+    // --------------------------------------------------------
 
     if (finalBookingType === "TEST") {
       if (uniqueTestNames.length === 0) {
@@ -179,73 +191,113 @@ const addLabOrder = async (req, res) => {
       finalTests = matchedTests.map(
         (test) => String(test.testName).trim()
       );
-    } else {
-      // Server-controlled prescription booking fee.
-      const prescriptionFee =
-        Number(process.env.LAB_PRESCRIPTION_FEE || 500);
+    }
 
-      if (
-        !Number.isFinite(prescriptionFee) ||
-        prescriptionFee <= 0
-      ) {
-        return res.status(500).json({
-          success: false,
-          message:
-            "LAB_PRESCRIPTION_FEE is not configured correctly.",
-        });
-      }
+    // --------------------------------------------------------
+    // PRESCRIPTION BOOKING
+    //
+    // No test names and no amount yet.
+    // Laboratory will determine these later.
+    // --------------------------------------------------------
 
-      totalAmount = prescriptionFee;
+    else {
+      totalAmount = 0;
       finalTests = [];
     }
 
     // --------------------------------------------------------
-    // CREATE PENDING PAYMENT BOOKING
+    // CREATE LAB BOOKING
     //
-    // IMPORTANT:
-    // Booking status stays Pending until the laboratory accepts
-    // it. Payment status becomes Paid only after Razorpay
-    // verification.
+    // For prescription:
+    // totalAmount = 0
+    // paymentStatus = Pending
+    //
+    // This means payment has NOT been made yet.
+    // The actual payment will happen at sample collection.
     // --------------------------------------------------------
+
     const order = await LabOrder.create({
       patientId: String(patientId).trim(),
-      patientName: String(patientName).trim(),
-      patientPhone: String(patientPhone || "").trim(),
-      doctorName: String(doctorName || "").trim(),
 
-      bookingType: finalBookingType,
+      patientName:
+        String(patientName).trim(),
 
-      tests: finalTests,
+      patientPhone:
+        String(patientPhone || "").trim(),
 
-      labId: String(lab._id),
-      labName: String(lab.name || ""),
+      doctorName:
+        String(doctorName || "").trim(),
 
-      address: String(address || "").trim(),
-      notes: String(notes || "").trim(),
+      bookingType:
+        finalBookingType,
 
-      totalAmount,
+      tests:
+        finalTests,
 
-      paymentStatus: "Pending",
-      razorpayOrderId: "",
-      razorpayPaymentId: "",
-      razorpaySignature: "",
-      paymentRecordId: "",
+      labId:
+        String(lab._id),
+
+      labName:
+        String(lab.name || ""),
+
+      address:
+        String(address || "").trim(),
+
+      notes:
+        String(notes || "").trim(),
+
+      totalAmount:
+        totalAmount,
+
+      // Payment is NOT completed.
+      // For prescription bookings it will happen
+      // when the sample is collected.
+      paymentStatus:
+        "Pending",
+
+      razorpayOrderId:
+        "",
+
+      razorpayPaymentId:
+        "",
+
+      razorpaySignature:
+        "",
+
+      paymentRecordId:
+        "",
 
       prescriptionImage:
         String(prescriptionImage || "").trim(),
 
-      collectionMode: finalCollectionMode,
+      collectionMode:
+        finalCollectionMode,
 
-      collectorId: "",
-      collectorName: "",
-      collectorPhone: "",
-      collectorStatus: "Not Assigned",
+      collectorId:
+        "",
 
-      status: "Pending",
+      collectorName:
+        "",
 
-      reports: [],
-      reportUploadedAt: null,
+      collectorPhone:
+        "",
+
+      collectorStatus:
+        "Not Assigned",
+
+      status:
+        "Pending",
+
+      reports:
+        [],
+
+      reportUploadedAt:
+        null,
     });
+
+    // --------------------------------------------------------
+    // LOG
+    // --------------------------------------------------------
 
     console.log("================================");
     console.log("NEW LAB ORDER");
@@ -260,19 +312,32 @@ const addLabOrder = async (req, res) => {
     console.log("STATUS =", order.status);
     console.log("================================");
 
+    // --------------------------------------------------------
+    // RESPONSE
+    // --------------------------------------------------------
+
     return res.status(201).json({
       success: true,
+
       message:
-        "Lab booking created. Payment is required before laboratory processing.",
+        finalBookingType === "PRESCRIPTION"
+          ? "Lab prescription booking created successfully. Payment will be collected when the sample is taken."
+          : "Lab booking created successfully.",
+
       order,
     });
+
   } catch (error) {
-    console.error("ADD LAB ORDER ERROR:", error);
+    console.error(
+      "ADD LAB ORDER ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
       message:
-        error?.message || "Unable to create lab booking.",
+        error?.message ||
+        "Unable to create lab booking.",
     });
   }
 };
@@ -284,11 +349,12 @@ const addLabOrder = async (req, res) => {
 
 const getLabOrders = async (req, res) => {
   try {
-    const orders = await LabOrder
-      .find()
-      .sort({
-        createdAt: -1,
-      });
+    const orders =
+      await LabOrder
+        .find()
+        .sort({
+          createdAt: -1,
+        });
 
     return res.status(200).json({
       success: true,
@@ -525,7 +591,8 @@ const assignSampleCollector = async (
     // --------------------------------------------------------
 
     if (
-      collector.status !== "Active"
+      collector.status !==
+      "Active"
     ) {
       return res.status(400).json({
         success: false,
@@ -550,7 +617,7 @@ const assignSampleCollector = async (
     }
 
     // --------------------------------------------------------
-    // ASSIGN COLLECTOR TO ORDER
+    // ASSIGN COLLECTOR
     // --------------------------------------------------------
 
     order.collectorId =
@@ -975,10 +1042,11 @@ const updateLabOrderStatus = async (
 
 // ============================================================
 // UPLOAD LAB REPORT
+//
 // Supports:
 // 1. Multiple images
 // 2. PDF
-// 3. Custom human-readable report names
+// 3. Custom report names
 // ============================================================
 
 const uploadReport = async (
@@ -1144,15 +1212,9 @@ const uploadReport = async (
 
     // --------------------------------------------------------
     // SAVE REPORTS
-    // --------------------------------------------------------
     //
-    // IMPORTANT:
-    // Use findByIdAndUpdate() instead of order.save().
-    //
-    // This prevents validation of unrelated required fields
-    // in an older LabOrder document, such as patientId,
-    // while updating the report information.
-    //
+    // findByIdAndUpdate prevents validation of unrelated
+    // old fields while updating report information.
     // --------------------------------------------------------
 
     const updatedOrder =

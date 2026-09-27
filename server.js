@@ -21,7 +21,7 @@ const labOrderRoutes = require("./routes/labOrderRoutes");
 const sampleCollectorRoutes = require("./routes/sampleCollectorRoutes");
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
-
+const verificationRoutes = require("./routes/verificationRoutes");
 // ================= APP =================
 
 const app = express();
@@ -154,6 +154,14 @@ console.log(
   "Payment routes mounted."
 );
 
+app.use(
+  "/api/verification",
+  verificationRoutes
+);
+
+console.log(
+  "Verification routes mounted."
+);
 // ================= TEST ROUTE =================
 
 app.get("/", (req, res) => {

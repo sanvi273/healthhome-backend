@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
 
+// ==========================================================
+// REPORT SCHEMA
+// ==========================================================
+
 const reportSchema = new mongoose.Schema(
   {
     reportName: {
@@ -7,31 +11,43 @@ const reportSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+
     fileName: {
       type: String,
       default: "",
     },
+
     fileUrl: {
       type: String,
       default: "",
     },
+
     fileType: {
       type: String,
       default: "",
     },
+
     pageNumber: {
       type: Number,
       default: 1,
     },
   },
-  { _id: false }
+  {
+    _id: false,
+  }
 );
+
+
+// ==========================================================
+// LAB ORDER SCHEMA
+// ==========================================================
 
 const labOrderSchema = new mongoose.Schema(
   {
-    // ==========================================================
+    // ========================================================
     // PATIENT
-    // ==========================================================
+    // ========================================================
+
     patientId: {
       type: String,
       required: true,
@@ -58,13 +74,21 @@ const labOrderSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // ==========================================================
+
+    // ========================================================
     // BOOKING
-    // ==========================================================
+    // ========================================================
+
     bookingType: {
       type: String,
-      enum: ["TEST", "PRESCRIPTION"],
+
+      enum: [
+        "TEST",
+        "PRESCRIPTION",
+      ],
+
       default: "TEST",
+
       index: true,
     },
 
@@ -73,9 +97,11 @@ const labOrderSchema = new mongoose.Schema(
       default: [],
     },
 
-    // ==========================================================
+
+    // ========================================================
     // LAB
-    // ==========================================================
+    // ========================================================
+
     labId: {
       type: String,
       default: "",
@@ -89,9 +115,11 @@ const labOrderSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // ==========================================================
+
+    // ========================================================
     // ADDRESS / COLLECTION
-    // ==========================================================
+    // ========================================================
+
     address: {
       type: String,
       default: "",
@@ -106,94 +134,147 @@ const labOrderSchema = new mongoose.Schema(
 
     collectionMode: {
       type: String,
-      enum: ["Home Collection", "Visit Laboratory"],
+
+      enum: [
+        "Home Collection",
+        "Visit Laboratory",
+      ],
+
       default: "Home Collection",
     },
 
-    // ==========================================================
+
+    // ========================================================
     // PAYMENT
     //
-    // Amount is calculated by backend from:
-    //   1. Lab test prices in Lab.tests
-    //   2. LAB_PRESCRIPTION_FEE for prescription booking
-    // ==========================================================
+    // NORMAL TEST BOOKING
+    // -------------------
+    // Amount is calculated from the selected lab tests.
+    //
+    // PRESCRIPTION BOOKING
+    // ---------------------
+    // Initial amount = 0
+    //
+    // Because the laboratory first needs to:
+    // 1. Review prescription
+    // 2. Determine required tests
+    // 3. Calculate final amount
+    //
+    // Payment status:
+    // Pending = Payment not completed
+    // Paid    = Payment completed
+    // Failed  = Payment failed
+    //
+    // For prescription bookings, payment will happen
+    // after the laboratory determines the final amount
+    // and at the sample collection stage.
+    // ========================================================
+
     totalAmount: {
       type: Number,
+
       default: 0,
+
       min: 0,
     },
 
     paymentStatus: {
       type: String,
-      enum: ["Pending", "Paid", "Failed"],
+
+      enum: [
+        "Pending",
+        "Paid",
+        "Failed",
+      ],
+
       default: "Pending",
+
       index: true,
     },
 
     razorpayOrderId: {
       type: String,
+
       default: "",
+
       index: true,
     },
 
     razorpayPaymentId: {
       type: String,
+
       default: "",
+
       index: true,
     },
 
     razorpaySignature: {
       type: String,
+
       default: "",
     },
 
     paymentRecordId: {
       type: String,
+
       default: "",
     },
 
-    // ==========================================================
+
+    // ========================================================
     // PRESCRIPTION
-    // ==========================================================
+    // ========================================================
+
     prescriptionImage: {
       type: String,
+
       default: "",
     },
 
-    // ==========================================================
+
+    // ========================================================
     // SAMPLE COLLECTION
-    // ==========================================================
+    // ========================================================
+
     collectorId: {
       type: String,
+
       default: "",
     },
 
     collectorName: {
       type: String,
+
       default: "",
     },
 
     collectorPhone: {
       type: String,
+
       default: "",
     },
 
     collectorStatus: {
       type: String,
+
       enum: [
         "Not Assigned",
         "Assigned",
         "On The Way",
         "Sample Collected",
       ],
+
       default: "Not Assigned",
     },
 
-    // ==========================================================
+
+    // ========================================================
     // LAB PROCESS
-    // ==========================================================
+    // ========================================================
+
     status: {
       type: String,
+
       enum: [
         "Pending",
         "Accepted",
@@ -206,44 +287,72 @@ const labOrderSchema = new mongoose.Schema(
         "Completed",
         "Rejected",
       ],
+
       default: "Pending",
+
       index: true,
     },
 
-    // ==========================================================
+
+    // ========================================================
     // REPORTS
-    // ==========================================================
+    // ========================================================
+
     reports: {
       type: [reportSchema],
+
       default: [],
     },
 
     reportUploadedAt: {
       type: Date,
+
       default: null,
     },
   },
+
   {
     timestamps: true,
   }
 );
 
-// Useful compound indexes for the current HealthHome flow.
+
+// ==========================================================
+// INDEXES
+// ==========================================================
+
+// Patient orders
 labOrderSchema.index({
   patientPhone: 1,
   createdAt: -1,
 });
 
+
+// Lab dashboard
 labOrderSchema.index({
   labId: 1,
   status: 1,
   createdAt: -1,
 });
 
+
+// Patient history
 labOrderSchema.index({
   patientId: 1,
   createdAt: -1,
 });
+
+
+// Payment-related lookup
+labOrderSchema.index({
+  paymentStatus: 1,
+  createdAt: -1,
+});
+
+
+// ==========================================================
+// MODEL
+// ==========================================================
 
 module.exports = mongoose.model(
   "LabOrder",

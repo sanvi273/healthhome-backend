@@ -1038,22 +1038,20 @@ const placePrescriptionOrder =
 
           medicines: [],
 
-          subtotal: 0,
+// Prescription processing fee
+subtotal: 500,
 
-          deliveryFee: 0,
+deliveryFee: 0,
 
-          discount: 0,
+discount: 0,
 
-          totalAmount: 0,
+totalAmount: 500,
 
-          currency:
-            "INR",
+paymentMethod:
+  "ONLINE",
 
-          paymentMethod:
-            "COD",
-
-          paymentStatus:
-            "Pending",
+paymentStatus:
+  "Pending",
 
           settlementStatus:
             "Pending",

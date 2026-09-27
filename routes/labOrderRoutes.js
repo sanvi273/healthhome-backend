@@ -17,23 +17,45 @@ const {
   uploadReport,
 } = require("../controllers/labOrderController");
 
-// Health check
+// ============================================================
+// HEALTH CHECK
+// ============================================================
+
 router.get("/test", (req, res) => {
   res.send("Lab order route working");
 });
 
-// Patient creates booking
+// ============================================================
+// PATIENT CREATES BOOKING
+// ============================================================
+
 router.post("/add", addLabOrder);
 
-// Existing dashboard list
+// ============================================================
+// LAB ORDER LIST
+// ============================================================
+
 router.get("/all", getLabOrders);
 
-// Patient/lab can fetch a specific booking
+// ============================================================
+// GET SINGLE LAB ORDER
+// ============================================================
+
 router.get("/:id", getLabOrderById);
 
-// Laboratory workflow
-router.put("/accept/:id", acceptLabOrder);
-router.put("/reject/:id", rejectLabOrder);
+// ============================================================
+// LABORATORY WORKFLOW
+// ============================================================
+
+router.put(
+  "/accept/:id",
+  acceptLabOrder
+);
+
+router.put(
+  "/reject/:id",
+  rejectLabOrder
+);
 
 router.put(
   "/assign-collector/:id",
@@ -65,7 +87,10 @@ router.put(
   updateLabOrderStatus
 );
 
-// Lab uploads completed reports
+// ============================================================
+// LAB UPLOADS REPORT
+// ============================================================
+
 router.put(
   "/report/:id",
   uploadReport

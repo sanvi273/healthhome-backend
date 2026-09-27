@@ -71,6 +71,7 @@ const addressSchema = new mongoose.Schema(
   }
 );
 
+
 // ============================================================
 // USER SCHEMA
 // ============================================================
@@ -84,18 +85,22 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
     },
 
     email: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
+      lowercase: true,
     },
 
     password: {
       type: String,
       required: true,
     },
+
 
     // ==========================================================
     // ROLE
@@ -105,14 +110,16 @@ const userSchema = new mongoose.Schema(
       type: String,
 
       enum: [
-        "patient",
-        "doctor",
-        "laboratory",
-        "pharmacy",
-      ],
+  "patient",
+  "doctor",
+  "laboratory",
+  "pharmacy",
+  "admin",
+],
 
       required: true,
     },
+
 
     // ==========================================================
     // PHONE
@@ -120,7 +127,10 @@ const userSchema = new mongoose.Schema(
 
     phone: {
       type: String,
+      default: "",
+      trim: true,
     },
+
 
     // ==========================================================
     // PROFILE IMAGE
@@ -128,7 +138,9 @@ const userSchema = new mongoose.Schema(
 
     profileImage: {
       type: String,
+      default: "",
     },
+
 
     // ==========================================================
     // ONESIGNAL
@@ -139,6 +151,7 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+
     // ==========================================================
     // SAVED ADDRESSES
     // ==========================================================
@@ -147,12 +160,141 @@ const userSchema = new mongoose.Schema(
       type: [addressSchema],
       default: [],
     },
+
+
+    // ==========================================================
+    // ACCOUNT STATUS
+    //
+    // PATIENT:
+    //   ACTIVE by default
+    //
+    // DOCTOR / LABORATORY / PHARMACY:
+    //   ACTIVE only after verification approval.
+    // ==========================================================
+
+    accountStatus: {
+      type: String,
+
+      enum: [
+        "ACTIVE",
+        "SUSPENDED",
+      ],
+
+      default: "ACTIVE",
+
+      index: true,
+    },
+
+
+    // ==========================================================
+    // VERIFICATION STATUS
+    //
+    // PATIENT:
+    //   NOT_REQUIRED
+    //
+    // PROFESSIONAL:
+    //   PENDING
+    //   UNDER_REVIEW
+    //   APPROVED
+    //   REJECTED
+    //
+    // ==========================================================
+
+    verificationStatus: {
+      type: String,
+
+      enum: [
+        "NOT_REQUIRED",
+        "PENDING",
+        "UNDER_REVIEW",
+        "APPROVED",
+        "REJECTED",
+      ],
+
+      default: "NOT_REQUIRED",
+
+      index: true,
+    },
+
+
+    // ==========================================================
+    // VERIFICATION APPLICATION ID
+    //
+    // Example:
+    // HH-DOC-2026-000001
+    // HH-LAB-2026-000002
+    // HH-PHA-2026-000003
+    //
+    // This is HealthHome's own verification ID.
+    // It is NOT the professional license number.
+    // ==========================================================
+
+    verificationId: {
+      type: String,
+
+      default: "",
+
+      index: true,
+
+      trim: true,
+    },
+
+
+    // ==========================================================
+    // VERIFICATION APPROVAL INFORMATION
+    // ==========================================================
+
+    verificationApprovedAt: {
+      type: Date,
+
+      default: null,
+    },
+
+    verificationApprovedBy: {
+      type: String,
+
+      default: "",
+    },
+
+
+    // ==========================================================
+    // SUSPENSION INFORMATION
+    // ==========================================================
+
+    suspendedAt: {
+      type: Date,
+
+      default: null,
+    },
+
+    suspensionReason: {
+      type: String,
+
+      default: "",
+      trim: true,
+    },
   },
 
   {
     timestamps: true,
   }
 );
+
+
+// ============================================================
+// INDEXES
+// ============================================================
+
+userSchema.index({
+  role: 1,
+  verificationStatus: 1,
+});
+
+userSchema.index({
+  role: 1,
+  accountStatus: 1,
+});
+
 
 // ============================================================
 // EXPORT
