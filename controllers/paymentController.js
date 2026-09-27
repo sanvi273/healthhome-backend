@@ -441,8 +441,8 @@ exports.verifyPayment = async (req, res) => {
       }
 
       providerId = String(service.labId || "");
-      providerType = "Laboratory";
-      expectedAmount = Number(service.totalAmount);
+providerType = "Lab";
+expectedAmount = Number(service.totalAmount);
       servicePatientId = String(service.patientId || "");
       servicePatientName = String(service.patientName || "");
       servicePatientPhone = String(service.patientPhone || "");
@@ -777,7 +777,7 @@ exports.webhook = async (req, res) => {
         });
 
         serviceType = "Lab";
-        providerType = "Laboratory";
+providerType = "Lab";
 
         if (service) {
           providerId = String(service.labId || "");
