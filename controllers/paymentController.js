@@ -1,5 +1,6 @@
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 
 const Payment = require("../models/Payment");
 const Order = require("../models/orderModel");
@@ -64,13 +65,14 @@ const getRazorpayErrorDetails = (error) => {
 //
 // POST /api/payment/create-order
 //
-// IMPORTANT:
-// Amount is ALWAYS taken from the HealthHome Order.
-// Flutter cannot decide the payment amount.
+// Supported:
+// Medicine
+// Lab
+// Doctor
 // ============================================================
 
-
 exports.createOrder = async (req, res) => {
+  console.log("🔥 NEW PAYMENT CONTROLLER LOADED - CREATE ORDER");
   try {
     const {
       userId,
@@ -87,87 +89,411 @@ exports.createOrder = async (req, res) => {
     console.log("SERVICE ID =", serviceId);
     console.log("==============================================");
 
-    const razorpayConfig = checkRazorpayConfiguration();
+    // ----------------------------------------------------------
+    // CHECK RAZORPAY CONFIGURATION
+    // ----------------------------------------------------------
+
+    const razorpayConfig =
+      checkRazorpayConfiguration();
 
     if (!razorpayConfig.success) {
-      return res.status(500).json(razorpayConfig);
+      return res.status(500).json(
+        razorpayConfig
+      );
     }
+
+    // ----------------------------------------------------------
+    // BASIC VALIDATION
+    // ----------------------------------------------------------
 
     if (!serviceType || !serviceId) {
       return res.status(400).json({
         success: false,
-        message: "serviceType and serviceId are required.",
+        message:
+          "serviceType and serviceId are required.",
       });
+    }
+
+    // ==========================================================
+    // DOCTOR CONSULTATION
+    //
+    // serviceId = Doctor MongoDB ID
+    //
+    // IMPORTANT:
+    // Appointment is created after successful payment.
+    // Therefore Razorpay order is created directly
+    // from the Doctor's fees.
+    // ==========================================================
+
+    if (serviceType === "Doctor") {
+      try {
+        // ------------------------------------------------------
+        // VALIDATE DOCTOR ID
+        // ------------------------------------------------------
+
+        if (
+          !mongoose.Types.ObjectId.isValid(
+            serviceId
+          )
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid doctor ID.",
+          });
+        }
+
+        // ------------------------------------------------------
+        // FIND DOCTOR
+        // ------------------------------------------------------
+
+        const doctor =
+          await mongoose.connection
+            .collection("doctors")
+            .findOne({
+              _id:
+                new mongoose.Types.ObjectId(
+                  serviceId
+                ),
+            });
+
+        if (!doctor) {
+          return res.status(404).json({
+            success: false,
+            message: "Doctor not found.",
+          });
+        }
+
+        // ------------------------------------------------------
+        // GET DOCTOR FEE FROM DATABASE
+        // ------------------------------------------------------
+
+        const amount =
+          Number(doctor.fees);
+
+        if (
+          !Number.isFinite(amount) ||
+          amount <= 0
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Invalid doctor consultation fee.",
+          });
+        }
+
+        const amountInPaise =
+          Math.round(amount * 100);
+
+        const receipt =
+          `HH_DOC_${doctor._id}_${Date.now()}`;
+
+        // ------------------------------------------------------
+        // CREATE RAZORPAY ORDER
+        // ------------------------------------------------------
+
+        let razorpayOrder;
+
+        try {
+          razorpayOrder =
+            await razorpay.orders.create({
+              amount: amountInPaise,
+              currency: "INR",
+              receipt,
+
+              notes: {
+                healthhomeDoctorId:
+                  String(doctor._id),
+
+                doctorName:
+                  String(
+                    doctor.name || ""
+                  ),
+
+                patientId:
+                  String(
+                    userId || ""
+                  ),
+
+                patientName:
+                  String(
+                    userName || ""
+                  ),
+
+                patientPhone:
+                  String(
+                    userPhone || ""
+                  ),
+
+                serviceType:
+                  "Doctor",
+              },
+            });
+        } catch (error) {
+          const details =
+            getRazorpayErrorDetails(
+              error
+            );
+
+          console.error(
+            "DOCTOR RAZORPAY CREATE ERROR:",
+            details
+          );
+
+          return res.status(500).json({
+            success: false,
+            message:
+              details.description ||
+              details.message ||
+              "Unable to create Razorpay order for doctor consultation.",
+            code:
+              details.code || "",
+          });
+        }
+
+        // ------------------------------------------------------
+        // CHECK RAZORPAY RESPONSE
+        // ------------------------------------------------------
+
+        if (!razorpayOrder?.id) {
+          return res.status(500).json({
+            success: false,
+            message:
+              "Razorpay returned an invalid doctor payment order.",
+          });
+        }
+
+        console.log(
+          "✅ DOCTOR RAZORPAY ORDER CREATED"
+        );
+
+        console.log(
+          "DOCTOR ID =",
+          doctor._id
+        );
+
+        console.log(
+          "DOCTOR NAME =",
+          doctor.name
+        );
+
+        console.log(
+          "DOCTOR FEE =",
+          amount
+        );
+
+        console.log(
+          "RAZORPAY ORDER ID =",
+          razorpayOrder.id
+        );
+
+        // ------------------------------------------------------
+        // RETURN TO FLUTTER
+        // ------------------------------------------------------
+
+        return res.status(200).json({
+          success: true,
+
+          key:
+            razorpayKeyId,
+
+          order: {
+            id:
+              razorpayOrder.id,
+
+            amount:
+              razorpayOrder.amount,
+
+            currency:
+              razorpayOrder.currency,
+
+            receipt:
+              razorpayOrder.receipt,
+          },
+
+          payment: {
+            amount,
+
+            userId:
+              userId || "",
+
+            userName:
+              userName || "",
+
+            userPhone:
+              userPhone || "",
+
+            serviceType:
+              "Doctor",
+
+            serviceId:
+              String(
+                doctor._id
+              ),
+          },
+        });
+      } catch (error) {
+        console.error(
+          "DOCTOR PAYMENT ORDER ERROR:",
+          error
+        );
+
+        return res.status(500).json({
+          success: false,
+          message:
+            error?.message ||
+            "Unable to create doctor payment order.",
+        });
+      }
     }
 
     // ==========================================================
     // MEDICINE
     // ==========================================================
+
     if (serviceType === "Medicine") {
-      const order = await Order.findById(serviceId);
+      const order =
+        await Order.findById(
+          serviceId
+        );
 
       if (!order) {
         return res.status(404).json({
           success: false,
-          message: "Medicine order not found.",
+          message:
+            "Medicine order not found.",
         });
       }
 
-      // The payment request must belong to the same patient.
+      // --------------------------------------------------------
+      // PATIENT OWNERSHIP CHECK
+      // --------------------------------------------------------
+
       if (
         userId &&
         order.patientId &&
-        String(userId) !== String(order.patientId)
+        String(userId) !==
+          String(order.patientId)
       ) {
         return res.status(403).json({
           success: false,
-          message: "This medicine order does not belong to this patient.",
+          message:
+            "This medicine order does not belong to this patient.",
         });
       }
 
-      if (order.paymentMethod !== "ONLINE") {
+      // --------------------------------------------------------
+      // PAYMENT METHOD CHECK
+      // --------------------------------------------------------
+
+      if (
+        order.paymentMethod !==
+        "ONLINE"
+      ) {
         return res.status(400).json({
           success: false,
-          message: "Razorpay can only be used for ONLINE orders.",
+          message:
+            "Razorpay can only be used for ONLINE orders.",
         });
       }
 
-      if (order.paymentStatus === "Paid") {
+      // --------------------------------------------------------
+      // ALREADY PAID
+      // --------------------------------------------------------
+
+      if (
+        order.paymentStatus ===
+        "Paid"
+      ) {
         return res.status(400).json({
           success: false,
-          message: "This order has already been paid.",
+          message:
+            "This order has already been paid.",
         });
       }
 
-      const amount = Number(order.totalAmount);
+      // --------------------------------------------------------
+      // AMOUNT
+      // --------------------------------------------------------
 
-      if (!Number.isFinite(amount) || amount <= 0) {
+      const amount =
+        Number(
+          order.totalAmount
+        );
+
+      if (
+        !Number.isFinite(amount) ||
+        amount <= 0
+      ) {
         return res.status(400).json({
           success: false,
-          message: "Invalid medicine order amount.",
+          message:
+            "Invalid medicine order amount.",
         });
       }
 
-      const amountInPaise = Math.round(amount * 100);
-      const receipt = `HH_MED_${order._id}_${Date.now()}`;
+      const amountInPaise =
+        Math.round(
+          amount * 100
+        );
+
+      const receipt =
+        `HH_MED_${order._id}_${Date.now()}`;
+
+      // --------------------------------------------------------
+      // CREATE RAZORPAY ORDER
+      // --------------------------------------------------------
 
       let razorpayOrder;
 
       try {
-        razorpayOrder = await razorpay.orders.create({
-          amount: amountInPaise,
-          currency: "INR",
-          receipt,
-          notes: {
-            healthhomeOrderId: String(order._id),
-            patientId: String(order.patientId || ""),
-            patientPhone: String(order.patientPhone || ""),
-            pharmacyId: String(order.pharmacyId || ""),
-            serviceType: "Medicine",
-          },
-        });
+        razorpayOrder =
+          await razorpay.orders.create({
+            amount:
+              amountInPaise,
+
+            currency:
+              "INR",
+
+            receipt,
+
+            notes: {
+              healthhomeOrderId:
+                String(
+                  order._id
+                ),
+
+              patientId:
+                String(
+                  order.patientId ||
+                    ""
+                ),
+
+              patientPhone:
+                String(
+                  order.patientPhone ||
+                    ""
+                ),
+
+              pharmacyId:
+                String(
+                  order.pharmacyId ||
+                    ""
+                ),
+
+              serviceType:
+                "Medicine",
+            },
+          });
       } catch (error) {
-        const details = getRazorpayErrorDetails(error);
+        const details =
+          getRazorpayErrorDetails(
+            error
+          );
+
+        console.error(
+          "MEDICINE RAZORPAY CREATE ERROR:",
+          details
+        );
 
         return res.status(500).json({
           success: false,
@@ -175,37 +501,80 @@ exports.createOrder = async (req, res) => {
             details.description ||
             details.message ||
             "Unable to create Razorpay order.",
-          code: details.code || "",
+          code:
+            details.code || "",
         });
       }
 
       if (!razorpayOrder?.id) {
         return res.status(500).json({
           success: false,
-          message: "Razorpay returned an invalid order response.",
+          message:
+            "Razorpay returned an invalid order response.",
         });
       }
 
-      order.razorpayOrderId = razorpayOrder.id;
-      order.paymentStatus = "Pending";
+      // --------------------------------------------------------
+      // SAVE RAZORPAY ORDER ID
+      // --------------------------------------------------------
+
+      order.razorpayOrderId =
+        razorpayOrder.id;
+
+      order.paymentStatus =
+        "Pending";
+
       await order.save();
+
+      // --------------------------------------------------------
+      // RETURN
+      // --------------------------------------------------------
 
       return res.status(200).json({
         success: true,
-        key: razorpayKeyId,
+
+        key:
+          razorpayKeyId,
+
         order: {
-          id: razorpayOrder.id,
-          amount: razorpayOrder.amount,
-          currency: razorpayOrder.currency,
-          receipt: razorpayOrder.receipt,
+          id:
+            razorpayOrder.id,
+
+          amount:
+            razorpayOrder.amount,
+
+          currency:
+            razorpayOrder.currency,
+
+          receipt:
+            razorpayOrder.receipt,
         },
+
         payment: {
           amount,
-          userId: order.patientId || userId || "",
-          userName: order.patientName || userName || "",
-          userPhone: order.patientPhone || userPhone || "",
-          serviceType: "Medicine",
-          serviceId: String(order._id),
+
+          userId:
+            order.patientId ||
+            userId ||
+            "",
+
+          userName:
+            order.patientName ||
+            userName ||
+            "",
+
+          userPhone:
+            order.patientPhone ||
+            userPhone ||
+            "",
+
+          serviceType:
+            "Medicine",
+
+          serviceId:
+            String(
+              order._id
+            ),
         },
       });
     }
@@ -213,52 +582,106 @@ exports.createOrder = async (req, res) => {
     // ==========================================================
     // LAB
     // ==========================================================
-    if (serviceType === "Lab") {
-      const LabOrder = require("../models/labOrder");
 
-      const labOrder = await LabOrder.findById(serviceId);
+    if (serviceType === "Lab") {
+      const LabOrder =
+        require(
+          "../models/labOrder"
+        );
+
+      const labOrder =
+        await LabOrder.findById(
+          serviceId
+        );
 
       if (!labOrder) {
         return res.status(404).json({
           success: false,
-          message: "Lab booking not found.",
+          message:
+            "Lab booking not found.",
         });
       }
 
-      // Current HealthHome lab flow stores patientId as the
-      // patient's phone number. Accept either userId or phone
-      // when the stored value is available.
-      const requestPatientId = String(userId || "").trim();
-      const requestPhone = String(userPhone || "").trim();
-      const storedPatientId = String(labOrder.patientId || "").trim();
-      const storedPhone = String(labOrder.patientPhone || "").trim();
+      // --------------------------------------------------------
+      // PATIENT CHECK
+      // --------------------------------------------------------
+
+      const requestPatientId =
+        String(
+          userId || ""
+        ).trim();
+
+      const requestPhone =
+        String(
+          userPhone || ""
+        ).trim();
+
+      const storedPatientId =
+        String(
+          labOrder.patientId ||
+            ""
+        ).trim();
+
+      const storedPhone =
+        String(
+          labOrder.patientPhone ||
+            ""
+        ).trim();
 
       const patientMatches =
         !requestPatientId &&
         !requestPhone
           ? false
-          : (requestPatientId && storedPatientId &&
-              requestPatientId === storedPatientId) ||
-            (requestPhone && storedPhone &&
-              requestPhone === storedPhone);
+          :
+            (
+              requestPatientId &&
+              storedPatientId &&
+              requestPatientId ===
+                storedPatientId
+            ) ||
+            (
+              requestPhone &&
+              storedPhone &&
+              requestPhone ===
+                storedPhone
+            );
 
       if (!patientMatches) {
         return res.status(403).json({
           success: false,
-          message: "This lab booking does not belong to this patient.",
+          message:
+            "This lab booking does not belong to this patient.",
         });
       }
 
-      if (labOrder.paymentStatus === "Paid") {
+      // --------------------------------------------------------
+      // ALREADY PAID
+      // --------------------------------------------------------
+
+      if (
+        labOrder.paymentStatus ===
+        "Paid"
+      ) {
         return res.status(400).json({
           success: false,
-          message: "This lab booking has already been paid.",
+          message:
+            "This lab booking has already been paid.",
         });
       }
 
-      const amount = Number(labOrder.totalAmount);
+      // --------------------------------------------------------
+      // AMOUNT
+      // --------------------------------------------------------
 
-      if (!Number.isFinite(amount) || amount <= 0) {
+      const amount =
+        Number(
+          labOrder.totalAmount
+        );
+
+      if (
+        !Number.isFinite(amount) ||
+        amount <= 0
+      ) {
         return res.status(400).json({
           success: false,
           message:
@@ -266,29 +689,75 @@ exports.createOrder = async (req, res) => {
         });
       }
 
-      const amountInPaise = Math.round(amount * 100);
-      const receipt = `HH_LAB_${labOrder._id}_${Date.now()}`;
+      const amountInPaise =
+        Math.round(
+          amount * 100
+        );
+
+      const receipt =
+        `HH_LAB_${labOrder._id}_${Date.now()}`;
+
+      // --------------------------------------------------------
+      // CREATE RAZORPAY ORDER
+      // --------------------------------------------------------
 
       let razorpayOrder;
 
       try {
-        razorpayOrder = await razorpay.orders.create({
-          amount: amountInPaise,
-          currency: "INR",
-          receipt,
-          notes: {
-            healthhomeLabOrderId: String(labOrder._id),
-            patientId: String(labOrder.patientId || ""),
-            patientPhone: String(labOrder.patientPhone || ""),
-            labId: String(labOrder.labId || ""),
-            labName: String(labOrder.labName || ""),
-            serviceType: "Lab",
-          },
-        });
-      } catch (error) {
-        const details = getRazorpayErrorDetails(error);
+        razorpayOrder =
+          await razorpay.orders.create({
+            amount:
+              amountInPaise,
 
-        console.error("LAB RAZORPAY CREATE ERROR:", details);
+            currency:
+              "INR",
+
+            receipt,
+
+            notes: {
+              healthhomeLabOrderId:
+                String(
+                  labOrder._id
+                ),
+
+              patientId:
+                String(
+                  labOrder.patientId ||
+                    ""
+                ),
+
+              patientPhone:
+                String(
+                  labOrder.patientPhone ||
+                    ""
+                ),
+
+              labId:
+                String(
+                  labOrder.labId ||
+                    ""
+                ),
+
+              labName:
+                String(
+                  labOrder.labName ||
+                    ""
+                ),
+
+              serviceType:
+                "Lab",
+            },
+          });
+      } catch (error) {
+        const details =
+          getRazorpayErrorDetails(
+            error
+          );
+
+        console.error(
+          "LAB RAZORPAY CREATE ERROR:",
+          details
+        );
 
         return res.status(500).json({
           success: false,
@@ -296,53 +765,105 @@ exports.createOrder = async (req, res) => {
             details.description ||
             details.message ||
             "Unable to create Razorpay order for lab booking.",
-          code: details.code || "",
+          code:
+            details.code || "",
         });
       }
 
       if (!razorpayOrder?.id) {
         return res.status(500).json({
           success: false,
-          message: "Razorpay returned an invalid lab payment order.",
+          message:
+            "Razorpay returned an invalid lab payment order.",
         });
       }
 
-      labOrder.razorpayOrderId = razorpayOrder.id;
-      labOrder.paymentStatus = "Pending";
+      // --------------------------------------------------------
+      // SAVE RAZORPAY ORDER ID
+      // --------------------------------------------------------
+
+      labOrder.razorpayOrderId =
+        razorpayOrder.id;
+
+      labOrder.paymentStatus =
+        "Pending";
+
       await labOrder.save();
+
+      // --------------------------------------------------------
+      // RETURN
+      // --------------------------------------------------------
 
       return res.status(200).json({
         success: true,
-        key: razorpayKeyId,
+
+        key:
+          razorpayKeyId,
+
         order: {
-          id: razorpayOrder.id,
-          amount: razorpayOrder.amount,
-          currency: razorpayOrder.currency,
-          receipt: razorpayOrder.receipt,
+          id:
+            razorpayOrder.id,
+
+          amount:
+            razorpayOrder.amount,
+
+          currency:
+            razorpayOrder.currency,
+
+          receipt:
+            razorpayOrder.receipt,
         },
+
         payment: {
           amount,
-          userId: labOrder.patientId || userId || "",
-          userName: labOrder.patientName || userName || "",
-          userPhone: labOrder.patientPhone || userPhone || "",
-          serviceType: "Lab",
-          serviceId: String(labOrder._id),
+
+          userId:
+            labOrder.patientId ||
+            userId ||
+            "",
+
+          userName:
+            labOrder.patientName ||
+            userName ||
+            "",
+
+          userPhone:
+            labOrder.patientPhone ||
+            userPhone ||
+            "",
+
+          serviceType:
+            "Lab",
+
+          serviceId:
+            String(
+              labOrder._id
+            ),
         },
       });
     }
+
+    // ==========================================================
+    // UNKNOWN SERVICE
+    // ==========================================================
 
     return res.status(400).json({
       success: false,
       message:
         `Payment creation for service "${serviceType}" is not enabled.`,
     });
+
   } catch (error) {
-    console.error("CREATE RAZORPAY ORDER SERVER ERROR:", error);
+    console.error(
+      "CREATE RAZORPAY ORDER SERVER ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
       message:
-        error?.message || "Unable to create Razorpay order.",
+        error?.message ||
+        "Unable to create Razorpay order.",
     });
   }
 };
@@ -351,10 +872,17 @@ exports.createOrder = async (req, res) => {
 // VERIFY RAZORPAY PAYMENT
 //
 // POST /api/payment/verify-payment
+//
+// Supported:
+// Doctor
+// Medicine
+// Lab
 // ============================================================
 
-
-exports.verifyPayment = async (req, res) => {
+exports.verifyPayment = async (
+  req,
+  res
+) => {
   try {
     const {
       razorpay_order_id,
@@ -365,19 +893,48 @@ exports.verifyPayment = async (req, res) => {
     } = req.body;
 
     console.log("");
-    console.log("==============================================");
-    console.log("VERIFY RAZORPAY PAYMENT");
-    console.log("SERVICE TYPE =", serviceType);
-    console.log("SERVICE ID =", serviceId);
-    console.log("RAZORPAY ORDER ID =", razorpay_order_id);
-    console.log("RAZORPAY PAYMENT ID =", razorpay_payment_id);
-    console.log("==============================================");
+    console.log(
+      "=============================================="
+    );
+    console.log(
+      "VERIFY RAZORPAY PAYMENT"
+    );
+    console.log(
+      "SERVICE TYPE =",
+      serviceType
+    );
+    console.log(
+      "SERVICE ID =",
+      serviceId
+    );
+    console.log(
+      "RAZORPAY ORDER ID =",
+      razorpay_order_id
+    );
+    console.log(
+      "RAZORPAY PAYMENT ID =",
+      razorpay_payment_id
+    );
+    console.log(
+      "=============================================="
+    );
 
-    const razorpayConfig = checkRazorpayConfiguration();
+    // ----------------------------------------------------------
+    // CONFIG
+    // ----------------------------------------------------------
+
+    const razorpayConfig =
+      checkRazorpayConfiguration();
 
     if (!razorpayConfig.success) {
-      return res.status(500).json(razorpayConfig);
+      return res.status(500).json(
+        razorpayConfig
+      );
     }
+
+    // ----------------------------------------------------------
+    // BASIC VALIDATION
+    // ----------------------------------------------------------
 
     if (
       !razorpay_order_id ||
@@ -386,16 +943,313 @@ exports.verifyPayment = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Razorpay payment information is incomplete.",
+        message:
+          "Razorpay payment information is incomplete.",
       });
     }
 
-    if (!serviceType || !serviceId) {
+    if (
+      !serviceType ||
+      !serviceId
+    ) {
       return res.status(400).json({
         success: false,
-        message: "serviceType and serviceId are required.",
+        message:
+          "serviceType and serviceId are required.",
       });
     }
+
+    // ==========================================================
+    // DOCTOR PAYMENT VERIFICATION
+    //
+    // Doctor appointment is created AFTER payment.
+    // Therefore:
+    //
+    // serviceId = Doctor ID
+    //
+    // We verify the amount directly from Doctor.fees.
+    // ==========================================================
+
+    if (serviceType === "Doctor") {
+      try {
+        // ------------------------------------------------------
+        // VALIDATE DOCTOR ID
+        // ------------------------------------------------------
+
+        if (
+          !mongoose.Types.ObjectId.isValid(
+            serviceId
+          )
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Invalid doctor ID.",
+          });
+        }
+
+        // ------------------------------------------------------
+        // FIND DOCTOR
+        // ------------------------------------------------------
+
+        const doctor =
+          await mongoose.connection
+            .collection("doctors")
+            .findOne({
+              _id:
+                new mongoose.Types.ObjectId(
+                  serviceId
+                ),
+            });
+
+        if (!doctor) {
+          return res.status(404).json({
+            success: false,
+            message:
+              "Doctor not found.",
+          });
+        }
+
+        // ------------------------------------------------------
+        // EXPECTED AMOUNT
+        // ------------------------------------------------------
+
+        const expectedAmount =
+          Number(
+            doctor.fees
+          );
+
+        if (
+          !Number.isFinite(
+            expectedAmount
+          ) ||
+          expectedAmount <= 0
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Invalid doctor consultation fee.",
+          });
+        }
+
+        // ------------------------------------------------------
+        // VERIFY RAZORPAY SIGNATURE
+        // ------------------------------------------------------
+
+        const generatedSignature =
+          crypto
+            .createHmac(
+              "sha256",
+              razorpayKeySecret
+            )
+            .update(
+              `${razorpay_order_id}|${razorpay_payment_id}`
+            )
+            .digest("hex");
+
+        const generatedBuffer =
+          Buffer.from(
+            generatedSignature,
+            "utf8"
+          );
+
+        const receivedBuffer =
+          Buffer.from(
+            String(
+              razorpay_signature
+            ),
+            "utf8"
+          );
+
+        if (
+          generatedBuffer.length !==
+            receivedBuffer.length ||
+          !crypto.timingSafeEqual(
+            generatedBuffer,
+            receivedBuffer
+          )
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Payment signature verification failed.",
+          });
+        }
+
+        // ------------------------------------------------------
+        // FETCH PAYMENT FROM RAZORPAY
+        // ------------------------------------------------------
+
+        const razorpayPayment =
+          await razorpay.payments.fetch(
+            razorpay_payment_id
+          );
+
+        // ------------------------------------------------------
+        // CHECK ORDER ID
+        // ------------------------------------------------------
+
+        if (
+          String(
+            razorpayPayment.order_id ||
+              ""
+          ) !==
+          String(
+            razorpay_order_id
+          )
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Payment does not belong to the expected Razorpay order.",
+          });
+        }
+
+        // ------------------------------------------------------
+        // CHECK AMOUNT
+        // ------------------------------------------------------
+
+        const expectedAmountPaise =
+          Math.round(
+            expectedAmount * 100
+          );
+
+        const actualAmountPaise =
+          Number(
+            razorpayPayment.amount
+          );
+
+        if (
+          actualAmountPaise !==
+          expectedAmountPaise
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Payment amount does not match the doctor consultation fee.",
+          });
+        }
+
+        // ------------------------------------------------------
+        // CHECK CAPTURED
+        // ------------------------------------------------------
+
+        if (
+          razorpayPayment.status !==
+          "captured"
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              `Payment is not captured. Current status: ${razorpayPayment.status}`,
+          });
+        }
+
+        // ------------------------------------------------------
+        // SUCCESS
+        // ------------------------------------------------------
+
+        console.log(
+          "=============================================="
+        );
+
+        console.log(
+          "✅ DOCTOR PAYMENT VERIFIED"
+        );
+
+        console.log(
+          "DOCTOR ID =",
+          serviceId
+        );
+
+        console.log(
+          "DOCTOR NAME =",
+          doctor.name
+        );
+
+        console.log(
+          "AMOUNT =",
+          expectedAmount
+        );
+
+        console.log(
+          "RAZORPAY ORDER ID =",
+          razorpay_order_id
+        );
+
+        console.log(
+          "RAZORPAY PAYMENT ID =",
+          razorpay_payment_id
+        );
+
+        console.log(
+          "=============================================="
+        );
+
+        return res.status(200).json({
+          success: true,
+
+          message:
+            "Doctor consultation payment verified successfully.",
+
+          payment: {
+            paymentId:
+              razorpay_payment_id,
+
+            orderId:
+              razorpay_order_id,
+
+            amount:
+              expectedAmount,
+
+            currency:
+              razorpayPayment.currency ||
+              "INR",
+
+            status:
+              "Success",
+
+            serviceType:
+              "Doctor",
+
+            serviceId:
+              String(
+                serviceId
+              ),
+          },
+
+          order: {
+            id:
+              String(
+                serviceId
+              ),
+
+            totalAmount:
+              expectedAmount,
+
+            paymentStatus:
+              "Paid",
+          },
+        });
+
+      } catch (error) {
+        console.error(
+          "DOCTOR PAYMENT VERIFICATION ERROR:",
+          error
+        );
+
+        return res.status(500).json({
+          success: false,
+          message:
+            error?.message ||
+            "Doctor payment verification failed.",
+        });
+      }
+    }
+
+    // ==========================================================
+    // MEDICINE
+    // ==========================================================
 
     let service;
     let providerId = "";
@@ -405,48 +1259,123 @@ exports.verifyPayment = async (req, res) => {
     let servicePatientName = "";
     let servicePatientPhone = "";
 
-    if (serviceType === "Medicine") {
-      service = await Order.findById(serviceId);
+    if (
+      serviceType ===
+      "Medicine"
+    ) {
+      service =
+        await Order.findById(
+          serviceId
+        );
 
       if (!service) {
         return res.status(404).json({
           success: false,
-          message: "Medicine order not found.",
+          message:
+            "Medicine order not found.",
         });
       }
 
-      providerId = String(service.pharmacyId || "");
-      providerType = "Pharmacy";
-      expectedAmount = Number(service.totalAmount);
-      servicePatientId = String(service.patientId || "");
-      servicePatientName = String(service.patientName || "");
-      servicePatientPhone = String(service.patientPhone || "");
+      providerId =
+        String(
+          service.pharmacyId ||
+            ""
+        );
 
-      if (service.paymentMethod !== "ONLINE") {
+      providerType =
+        "Pharmacy";
+
+      expectedAmount =
+        Number(
+          service.totalAmount
+        );
+
+      servicePatientId =
+        String(
+          service.patientId ||
+            ""
+        );
+
+      servicePatientName =
+        String(
+          service.patientName ||
+            ""
+        );
+
+      servicePatientPhone =
+        String(
+          service.patientPhone ||
+            ""
+        );
+
+      if (
+        service.paymentMethod !==
+        "ONLINE"
+      ) {
         return res.status(400).json({
           success: false,
-          message: "This medicine order is not configured for online payment.",
+          message:
+            "This medicine order is not configured for online payment.",
         });
       }
-    } else if (serviceType === "Lab") {
-      const LabOrder = require("../models/labOrder");
 
-      service = await LabOrder.findById(serviceId);
+    } else if (
+      serviceType ===
+      "Lab"
+    ) {
+
+      const LabOrder =
+        require(
+          "../models/labOrder"
+        );
+
+      service =
+        await LabOrder.findById(
+          serviceId
+        );
 
       if (!service) {
         return res.status(404).json({
           success: false,
-          message: "Lab booking not found.",
+          message:
+            "Lab booking not found.",
         });
       }
 
-      providerId = String(service.labId || "");
-providerType = "Lab";
-expectedAmount = Number(service.totalAmount);
-      servicePatientId = String(service.patientId || "");
-      servicePatientName = String(service.patientName || "");
-      servicePatientPhone = String(service.patientPhone || "");
+      providerId =
+        String(
+          service.labId ||
+            ""
+        );
+
+      providerType =
+        "Lab";
+
+      expectedAmount =
+        Number(
+          service.totalAmount
+        );
+
+      servicePatientId =
+        String(
+          service.patientId ||
+            ""
+        );
+
+      servicePatientName =
+        String(
+          service.patientName ||
+            ""
+        );
+
+      servicePatientPhone =
+        String(
+          service.patientPhone ||
+            ""
+        );
+
     } else {
+
       return res.status(400).json({
         success: false,
         message:
@@ -454,59 +1383,108 @@ expectedAmount = Number(service.totalAmount);
       });
     }
 
-    if (!Number.isFinite(expectedAmount) || expectedAmount <= 0) {
+    // ==========================================================
+    // VALIDATE AMOUNT
+    // ==========================================================
+
+    if (
+      !Number.isFinite(
+        expectedAmount
+      ) ||
+      expectedAmount <= 0
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid service amount.",
+        message:
+          "Invalid service amount.",
       });
     }
 
     // ==========================================================
-    // THE RAZORPAY ORDER ID MUST MATCH OUR DATABASE
+    // ORDER ID MUST MATCH DATABASE
     // ==========================================================
+
     if (
-      String(service.razorpayOrderId || "") !==
-      String(razorpay_order_id)
+      String(
+        service.razorpayOrderId ||
+          ""
+      ) !==
+      String(
+        razorpay_order_id
+      )
     ) {
       return res.status(400).json({
         success: false,
-        message: "Razorpay order does not match the HealthHome booking.",
+        message:
+          "Razorpay order does not match the HealthHome booking.",
       });
     }
 
     // ==========================================================
     // SIGNATURE VERIFICATION
     // ==========================================================
-    const generatedSignature = crypto
-      .createHmac("sha256", razorpayKeySecret)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-      .digest("hex");
 
-    const generatedBuffer = Buffer.from(generatedSignature, "utf8");
-    const receivedBuffer = Buffer.from(
-      String(razorpay_signature),
-      "utf8"
-    );
+    const generatedSignature =
+      crypto
+        .createHmac(
+          "sha256",
+          razorpayKeySecret
+        )
+        .update(
+          `${razorpay_order_id}|${razorpay_payment_id}`
+        )
+        .digest("hex");
+
+    const generatedBuffer =
+      Buffer.from(
+        generatedSignature,
+        "utf8"
+      );
+
+    const receivedBuffer =
+      Buffer.from(
+        String(
+          razorpay_signature
+        ),
+        "utf8"
+      );
 
     if (
-      generatedBuffer.length !== receivedBuffer.length ||
-      !crypto.timingSafeEqual(generatedBuffer, receivedBuffer)
+      generatedBuffer.length !==
+        receivedBuffer.length ||
+      !crypto.timingSafeEqual(
+        generatedBuffer,
+        receivedBuffer
+      )
     ) {
       return res.status(400).json({
         success: false,
-        message: "Payment signature verification failed.",
+        message:
+          "Payment signature verification failed.",
       });
     }
 
     // ==========================================================
-    // FETCH PAYMENT DIRECTLY FROM RAZORPAY
+    // FETCH PAYMENT FROM RAZORPAY
     // ==========================================================
+
     const razorpayPayment =
-      await razorpay.payments.fetch(razorpay_payment_id);
+      await razorpay.payments.fetch(
+        razorpay_payment_id
+      );
+
+    // ==========================================================
+    // CHECK ORDER ID
+    // ==========================================================
 
     if (
-      String(razorpayPayment.order_id || "") !==
-      String(razorpay_order_id)
+      String(
+        razorpayPayment.order_id ||
+          ""
+      ) !==
+      String(
+        razorpay_order_id
+      )
     ) {
       return res.status(400).json({
         success: false,
@@ -515,13 +1493,24 @@ expectedAmount = Number(service.totalAmount);
       });
     }
 
+    // ==========================================================
+    // CHECK AMOUNT
+    // ==========================================================
+
     const expectedAmountPaise =
-      Math.round(expectedAmount * 100);
+      Math.round(
+        expectedAmount * 100
+      );
 
     const actualAmountPaise =
-      Number(razorpayPayment.amount);
+      Number(
+        razorpayPayment.amount
+      );
 
-    if (actualAmountPaise !== expectedAmountPaise) {
+    if (
+      actualAmountPaise !==
+      expectedAmountPaise
+    ) {
       return res.status(400).json({
         success: false,
         message:
@@ -529,7 +1518,14 @@ expectedAmount = Number(service.totalAmount);
       });
     }
 
-    if (razorpayPayment.status !== "captured") {
+    // ==========================================================
+    // CHECK CAPTURED
+    // ==========================================================
+
+    if (
+      razorpayPayment.status !==
+      "captured"
+    ) {
       return res.status(400).json({
         success: false,
         message:
@@ -540,47 +1536,94 @@ expectedAmount = Number(service.totalAmount);
     // ==========================================================
     // IDEMPOTENCY
     // ==========================================================
-    const existingPayment = await Payment.findOne({
-      paymentId: razorpay_payment_id,
-    });
+
+    const existingPayment =
+      await Payment.findOne({
+        paymentId:
+          razorpay_payment_id,
+      });
 
     if (existingPayment) {
-      if (service.paymentStatus !== "Paid") {
-        service.paymentStatus = "Paid";
-        service.razorpayPaymentId = razorpay_payment_id;
-        service.razorpaySignature = razorpay_signature;
-        service.paymentRecordId = String(existingPayment._id);
+
+      if (
+        service.paymentStatus !==
+        "Paid"
+      ) {
+        service.paymentStatus =
+          "Paid";
+
+        service.razorpayPaymentId =
+          razorpay_payment_id;
+
+        service.razorpaySignature =
+          razorpay_signature;
+
+        service.paymentRecordId =
+          String(
+            existingPayment._id
+          );
+
         await service.save();
       }
 
       return res.status(200).json({
         success: true,
-        message: "Payment already verified.",
-        payment: existingPayment,
+        message:
+          "Payment already verified.",
+        payment:
+          existingPayment,
+
         order: {
-          id: service._id,
-          totalAmount: expectedAmount,
-          paymentStatus: service.paymentStatus,
-          status: service.status,
+          id:
+            service._id,
+
+          totalAmount:
+            expectedAmount,
+
+          paymentStatus:
+            service.paymentStatus,
+
+          status:
+            service.status,
         },
       });
     }
 
-    // If a webhook already marked the service paid with another
-    // payment ID, do not silently overwrite it.
-    if (service.paymentStatus === "Paid") {
+    // ==========================================================
+    // ALREADY PAID
+    // ==========================================================
+
+    if (
+      service.paymentStatus ===
+      "Paid"
+    ) {
+
       if (
-        String(service.razorpayPaymentId || "") ===
-        String(razorpay_payment_id)
+        String(
+          service.razorpayPaymentId ||
+            ""
+        ) ===
+        String(
+          razorpay_payment_id
+        )
       ) {
         return res.status(200).json({
           success: true,
-          message: "Payment already verified.",
+          message:
+            "Payment already verified.",
+
           order: {
-            id: service._id,
-            totalAmount: expectedAmount,
-            paymentStatus: "Paid",
-            status: service.status,
+            id:
+              service._id,
+
+            totalAmount:
+              expectedAmount,
+
+            paymentStatus:
+              "Paid",
+
+            status:
+              service.status,
           },
         });
       }
@@ -592,81 +1635,168 @@ expectedAmount = Number(service.totalAmount);
       });
     }
 
-    const paidAmount = actualAmountPaise / 100;
+    // ==========================================================
+    // CREATE PAYMENT RECORD
+    // ==========================================================
 
-    const platformFee = Number(service.platformFee || 0);
-    const providerAmount = Number(
-      service.providerAmount ||
-      Math.max(0, expectedAmount - platformFee)
-    );
+    const paidAmount =
+      actualAmountPaise / 100;
 
-    const payment = await Payment.create({
-      orderReferenceId: String(service._id),
-      paymentId: razorpay_payment_id,
-      orderId: razorpay_order_id,
-      signature: razorpay_signature,
+    const platformFee =
+      Number(
+        service.platformFee ||
+          0
+      );
 
-      userId: servicePatientId,
-      userName: servicePatientName,
-      userPhone: servicePatientPhone,
+    const providerAmount =
+      Number(
+        service.providerAmount ||
+          Math.max(
+            0,
+            expectedAmount -
+              platformFee
+          )
+      );
 
-      serviceType,
-      serviceId: String(service._id),
+    const payment =
+      await Payment.create({
+        orderReferenceId:
+          String(
+            service._id
+          ),
 
-      amount: paidAmount,
-      currency: razorpayPayment.currency || "INR",
-      paymentMethod: "ONLINE",
+        paymentId:
+          razorpay_payment_id,
 
-      status: "Success",
-      razorpayStatus: razorpayPayment.status,
+        orderId:
+          razorpay_order_id,
 
-      settlementStatus: "Pending",
+        signature:
+          razorpay_signature,
 
-      providerId,
-      providerType,
+        userId:
+          servicePatientId,
 
-      platformFee,
-      providerAmount,
+        userName:
+          servicePatientName,
 
-      cashCollected: false,
-      cashCollectedAt: null,
-    });
+        userPhone:
+          servicePatientPhone,
+
+        serviceType,
+
+        serviceId:
+          String(
+            service._id
+          ),
+
+        amount:
+          paidAmount,
+
+        currency:
+          razorpayPayment.currency ||
+          "INR",
+
+        paymentMethod:
+          "ONLINE",
+
+        status:
+          "Success",
+
+        razorpayStatus:
+          razorpayPayment.status,
+
+        settlementStatus:
+          "Pending",
+
+        providerId,
+
+        providerType,
+
+        platformFee,
+
+        providerAmount,
+
+        cashCollected:
+          false,
+
+        cashCollectedAt:
+          null,
+      });
 
     // ==========================================================
-    // UPDATE THE REAL HEALTHHOME SERVICE
+    // UPDATE SERVICE
     // ==========================================================
-    service.paymentStatus = "Paid";
-    service.razorpayPaymentId = razorpay_payment_id;
-    service.razorpaySignature = razorpay_signature;
-    service.paymentRecordId = String(payment._id);
 
-    if ("settlementStatus" in service) {
-      service.settlementStatus = "Pending";
+    service.paymentStatus =
+      "Paid";
+
+    service.razorpayPaymentId =
+      razorpay_payment_id;
+
+    service.razorpaySignature =
+      razorpay_signature;
+
+    service.paymentRecordId =
+      String(
+        payment._id
+      );
+
+    if (
+      "settlementStatus" in
+      service
+    ) {
+      service.settlementStatus =
+        "Pending";
     }
 
     await service.save();
 
-    console.log("✅ PAYMENT VERIFIED:", payment._id);
-    console.log("✅ SERVICE MARKED PAID:", service._id);
+    console.log(
+      "✅ PAYMENT VERIFIED:",
+      payment._id
+    );
+
+    console.log(
+      "✅ SERVICE MARKED PAID:",
+      service._id
+    );
 
     return res.status(200).json({
       success: true,
-      message: "Payment verified successfully.",
+
+      message:
+        "Payment verified successfully.",
+
       payment,
+
       order: {
-        id: service._id,
-        totalAmount: expectedAmount,
-        paymentStatus: service.paymentStatus,
-        status: service.status,
+        id:
+          service._id,
+
+        totalAmount:
+          expectedAmount,
+
+        paymentStatus:
+          service.paymentStatus,
+
+        status:
+          service.status,
       },
     });
+
   } catch (error) {
-    console.error("VERIFY PAYMENT SERVER ERROR:", error);
+
+    console.error(
+      "VERIFY PAYMENT SERVER ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
       message:
-        error?.message || "Payment verification failed.",
+        error?.message ||
+        "Payment verification failed.",
     });
   }
 };
@@ -680,22 +1810,31 @@ expectedAmount = Number(service.totalAmount);
 // server.js must use express.raw() for this route.
 // ============================================================
 
-
-exports.webhook = async (req, res) => {
+exports.webhook = async (
+  req,
+  res
+) => {
   try {
+
     const webhookSecret =
       process.env.RAZORPAY_WEBHOOK_SECRET;
 
     if (!webhookSecret) {
       return res.status(500).json({
         success: false,
-        message: "Razorpay webhook secret is not configured.",
+        message:
+          "Razorpay webhook secret is not configured.",
       });
     }
 
-    const rawBody = req.body;
+    const rawBody =
+      req.body;
 
-    if (!Buffer.isBuffer(rawBody)) {
+    if (
+      !Buffer.isBuffer(
+        rawBody
+      )
+    ) {
       return res.status(400).json({
         success: false,
         message:
@@ -704,27 +1843,50 @@ exports.webhook = async (req, res) => {
     }
 
     const receivedSignature =
-      req.headers["x-razorpay-signature"];
+      req.headers[
+        "x-razorpay-signature"
+      ];
 
     if (!receivedSignature) {
       return res.status(400).json({
         success: false,
-        message: "Razorpay webhook signature missing.",
+        message:
+          "Razorpay webhook signature missing.",
       });
     }
 
-    const generatedSignature = crypto
-      .createHmac("sha256", webhookSecret)
-      .update(rawBody)
-      .digest("hex");
+    // ----------------------------------------------------------
+    // VERIFY WEBHOOK SIGNATURE
+    // ----------------------------------------------------------
+
+    const generatedSignature =
+      crypto
+        .createHmac(
+          "sha256",
+          webhookSecret
+        )
+        .update(
+          rawBody
+        )
+        .digest("hex");
 
     const generatedBuffer =
-      Buffer.from(generatedSignature, "utf8");
+      Buffer.from(
+        generatedSignature,
+        "utf8"
+      );
+
     const receivedBuffer =
-      Buffer.from(String(receivedSignature), "utf8");
+      Buffer.from(
+        String(
+          receivedSignature
+        ),
+        "utf8"
+      );
 
     if (
-      generatedBuffer.length !== receivedBuffer.length ||
+      generatedBuffer.length !==
+        receivedBuffer.length ||
       !crypto.timingSafeEqual(
         generatedBuffer,
         receivedBuffer
@@ -732,116 +1894,223 @@ exports.webhook = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid webhook signature.",
+        message:
+          "Invalid webhook signature.",
       });
     }
 
     const payload =
-      JSON.parse(rawBody.toString("utf8"));
+      JSON.parse(
+        rawBody.toString(
+          "utf8"
+        )
+      );
 
-    const event = payload.event;
+    const event =
+      payload.event;
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // PAYMENT CAPTURED
-    // ----------------------------------------------------------
-    if (event === "payment.captured") {
+    // ==========================================================
+
+    if (
+      event ===
+      "payment.captured"
+    ) {
+
       const paymentEntity =
-        payload.payload?.payment?.entity;
+        payload.payload
+          ?.payment
+          ?.entity;
 
       if (!paymentEntity) {
         return res.status(200).json({
           success: true,
-          message: "Webhook received without payment entity.",
+          message:
+            "Webhook received without payment entity.",
         });
       }
 
       const razorpayPaymentId =
         paymentEntity.id;
+
       const razorpayOrderId =
         paymentEntity.order_id;
 
-      let service = await Order.findOne({
-        razorpayOrderId,
-      });
+      // --------------------------------------------------------
+      // MEDICINE
+      // --------------------------------------------------------
 
-      let serviceType = "Medicine";
-      let providerType = "Pharmacy";
-      let providerId = "";
-
-      if (!service) {
-        const LabOrder =
-          require("../models/labOrder");
-
-        service = await LabOrder.findOne({
+      let service =
+        await Order.findOne({
           razorpayOrderId,
         });
 
-        serviceType = "Lab";
-providerType = "Lab";
+      let serviceType =
+        "Medicine";
 
-        if (service) {
-          providerId = String(service.labId || "");
-        }
-      } else {
-        providerId = String(service.pharmacyId || "");
-      }
+      let providerType =
+        "Pharmacy";
+
+      let providerId =
+        "";
+
+      // --------------------------------------------------------
+      // LAB
+      // --------------------------------------------------------
 
       if (!service) {
-        // Do not repeatedly retry a payment we cannot map.
+
+        const LabOrder =
+          require(
+            "../models/labOrder"
+          );
+
+        service =
+          await LabOrder.findOne({
+            razorpayOrderId,
+          });
+
+        serviceType =
+          "Lab";
+
+        providerType =
+          "Lab";
+
+        if (service) {
+          providerId =
+            String(
+              service.labId ||
+                ""
+            );
+        }
+
+      } else {
+
+        providerId =
+          String(
+            service.pharmacyId ||
+              ""
+          );
+      }
+
+      // --------------------------------------------------------
+      // DOCTOR
+      //
+      // Doctor payment happens before appointment creation.
+      // Therefore there may be no HealthHome service record
+      // containing razorpayOrderId yet.
+      //
+      // verifyPayment() handles Doctor payment directly.
+      // --------------------------------------------------------
+
+      if (!service) {
+
+        console.log(
+          "ℹ️ WEBHOOK: No Medicine/Lab service found for Razorpay order:",
+          razorpayOrderId
+        );
+
         return res.status(200).json({
           success: true,
-          message: "Webhook received; HealthHome service not found.",
+          message:
+            "Webhook received; no Medicine/Lab service mapping found.",
         });
       }
 
+      // --------------------------------------------------------
+      // AMOUNT CHECK
+      // --------------------------------------------------------
+
       const expectedAmountPaise =
-        Math.round(Number(service.totalAmount) * 100);
+        Math.round(
+          Number(
+            service.totalAmount
+          ) * 100
+        );
 
       const webhookAmount =
-        Number(paymentEntity.amount);
+        Number(
+          paymentEntity.amount
+        );
 
       if (
-        !Number.isFinite(expectedAmountPaise) ||
-        webhookAmount !== expectedAmountPaise
+        !Number.isFinite(
+          expectedAmountPaise
+        ) ||
+        webhookAmount !==
+          expectedAmountPaise
       ) {
         return res.status(400).json({
           success: false,
-          message: "Webhook payment amount mismatch.",
+          message:
+            "Webhook payment amount mismatch.",
         });
       }
 
-      if (paymentEntity.status !== "captured") {
+      // --------------------------------------------------------
+      // CAPTURED CHECK
+      // --------------------------------------------------------
+
+      if (
+        paymentEntity.status !==
+        "captured"
+      ) {
         return res.status(200).json({
           success: true,
-          message: "Payment is not captured yet.",
+          message:
+            "Payment is not captured yet.",
         });
       }
+
+      // --------------------------------------------------------
+      // CHECK EXISTING PAYMENT
+      // --------------------------------------------------------
 
       const existingPayment =
         await Payment.findOne({
-          paymentId: razorpayPaymentId,
+          paymentId:
+            razorpayPaymentId,
         });
 
       if (existingPayment) {
-        if (service.paymentStatus !== "Paid") {
-          service.paymentStatus = "Paid";
+
+        if (
+          service.paymentStatus !==
+          "Paid"
+        ) {
+          service.paymentStatus =
+            "Paid";
+
           service.razorpayPaymentId =
             razorpayPaymentId;
+
           service.paymentRecordId =
-            String(existingPayment._id);
+            String(
+              existingPayment._id
+            );
+
           await service.save();
         }
 
         return res.status(200).json({
           success: true,
-          message: "Webhook already processed.",
+          message:
+            "Webhook already processed.",
         });
       }
 
+      // --------------------------------------------------------
+      // CREATE PAYMENT RECORD
+      // --------------------------------------------------------
+
       const payment =
         await Payment.create({
+
           orderReferenceId:
-            String(service._id),
+            String(
+              service._id
+            ),
 
           paymentId:
             razorpayPaymentId,
@@ -849,26 +2118,40 @@ providerType = "Lab";
           orderId:
             razorpayOrderId,
 
-          signature: "",
+          signature:
+            "",
 
           userId:
-            String(service.patientId || ""),
+            String(
+              service.patientId ||
+                ""
+            ),
 
           userName:
-            String(service.patientName || ""),
+            String(
+              service.patientName ||
+                ""
+            ),
 
           userPhone:
-            String(service.patientPhone || ""),
+            String(
+              service.patientPhone ||
+                ""
+            ),
 
           serviceType,
+
           serviceId:
-            String(service._id),
+            String(
+              service._id
+            ),
 
           amount:
             webhookAmount / 100,
 
           currency:
-            paymentEntity.currency || "INR",
+            paymentEntity.currency ||
+            "INR",
 
           paymentMethod:
             "ONLINE",
@@ -877,22 +2160,27 @@ providerType = "Lab";
             "Success",
 
           razorpayStatus:
-            paymentEntity.status || "captured",
+            paymentEntity.status ||
+            "captured",
 
           settlementStatus:
             "Pending",
 
           providerId,
+
           providerType,
 
           platformFee:
-            Number(service.platformFee || 0),
+            Number(
+              service.platformFee ||
+                0
+            ),
 
           providerAmount:
             Number(
               service.providerAmount ||
-              service.totalAmount ||
-              0
+                service.totalAmount ||
+                0
             ),
 
           cashCollected:
@@ -902,14 +2190,27 @@ providerType = "Lab";
             null,
         });
 
-      service.paymentStatus = "Paid";
+      // --------------------------------------------------------
+      // MARK SERVICE PAID
+      // --------------------------------------------------------
+
+      service.paymentStatus =
+        "Paid";
+
       service.razorpayPaymentId =
         razorpayPaymentId;
-      service.paymentRecordId =
-        String(payment._id);
 
-      if ("settlementStatus" in service) {
-        service.settlementStatus = "Pending";
+      service.paymentRecordId =
+        String(
+          payment._id
+        );
+
+      if (
+        "settlementStatus" in
+        service
+      ) {
+        service.settlementStatus =
+          "Pending";
       }
 
       await service.save();
@@ -918,38 +2219,61 @@ providerType = "Lab";
         "✅ WEBHOOK PAYMENT SAVED:",
         payment._id
       );
+
       console.log(
         "✅ WEBHOOK SERVICE MARKED PAID:",
         service._id
       );
     }
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // PAYMENT FAILED
-    // ----------------------------------------------------------
-    if (event === "payment.failed") {
-      const paymentEntity =
-        payload.payload?.payment?.entity;
+    // ==========================================================
 
-      if (paymentEntity?.order_id) {
+    if (
+      event ===
+      "payment.failed"
+    ) {
+
+      const paymentEntity =
+        payload.payload
+          ?.payment
+          ?.entity;
+
+      if (
+        paymentEntity?.order_id
+      ) {
+
         const razorpayOrderId =
           paymentEntity.order_id;
 
-        let service = await Order.findOne({
-          razorpayOrderId,
-        });
-
-        if (!service) {
-          const LabOrder =
-            require("../models/labOrder");
-
-          service = await LabOrder.findOne({
+        let service =
+          await Order.findOne({
             razorpayOrderId,
           });
+
+        if (!service) {
+
+          const LabOrder =
+            require(
+              "../models/labOrder"
+            );
+
+          service =
+            await LabOrder.findOne({
+              razorpayOrderId,
+            });
         }
 
-        if (service && service.paymentStatus !== "Paid") {
-          service.paymentStatus = "Failed";
+        if (
+          service &&
+          service.paymentStatus !==
+            "Paid"
+        ) {
+
+          service.paymentStatus =
+            "Failed";
+
           await service.save();
         }
       }
@@ -957,15 +2281,21 @@ providerType = "Lab";
 
     return res.status(200).json({
       success: true,
-      message: "Webhook processed successfully.",
+      message:
+        "Webhook processed successfully.",
     });
+
   } catch (error) {
-    console.error("RAZORPAY WEBHOOK ERROR:", error);
+
+    console.error(
+      "RAZORPAY WEBHOOK ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Webhook processing failed.",
+      message:
+        "Webhook processing failed.",
     });
   }
 };
-
