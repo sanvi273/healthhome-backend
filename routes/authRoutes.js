@@ -10,6 +10,7 @@ const {
 
 const {
     sendOTP,
+    verifyOTP,  
 } = require("../controllers/otpController");
 
 const router = express.Router();
@@ -39,6 +40,15 @@ router.post(
 router.post(
     "/send-otp",
     sendOTP
+);
+
+// ============================================================
+// VERIFY OTP
+// ============================================================
+
+router.post(
+    "/verify-otp",
+    verifyOTP
 );
 
 // ============================================================

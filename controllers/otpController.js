@@ -99,6 +99,127 @@ const sendOTP = async (req, res) => {
     }
 };
 
+// ============================================================
+// VERIFY OTP
+// ============================================================
+
+const verifyOTP = async (req, res) => {
+    try {
+        const { phone, otp } = req.body;
+
+        // ----------------------------------------------------
+        // VALIDATION
+        // ----------------------------------------------------
+
+        if (!phone || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: "Phone number and OTP are required",
+            });
+        }
+
+        const normalizedPhone = String(phone).trim();
+        const enteredOTP = String(otp).trim();
+
+        // ----------------------------------------------------
+        // FIND OTP
+        // ----------------------------------------------------
+
+        const otpRecord = await OTP.findOne({
+            phone: normalizedPhone,
+        });
+
+        if (!otpRecord) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP not found or expired",
+            });
+        }
+
+        // ----------------------------------------------------
+        // CHECK EXPIRY
+        // ----------------------------------------------------
+
+        if (new Date() > otpRecord.expiresAt) {
+
+            await OTP.deleteOne({
+                _id: otpRecord._id,
+            });
+
+            return res.status(400).json({
+                success: false,
+                message: "OTP has expired",
+            });
+        }
+
+        // ----------------------------------------------------
+        // CHECK ATTEMPTS
+        // ----------------------------------------------------
+
+        if (otpRecord.attempts >= 5) {
+
+            await OTP.deleteOne({
+                _id: otpRecord._id,
+            });
+
+            return res.status(429).json({
+                success: false,
+                message: "Too many incorrect attempts. Please request a new OTP.",
+            });
+        }
+
+        // ----------------------------------------------------
+        // COMPARE OTP
+        // ----------------------------------------------------
+
+        const isValid = await bcrypt.compare(
+            enteredOTP,
+            otpRecord.otp
+        );
+
+        // ----------------------------------------------------
+        // INVALID OTP
+        // ----------------------------------------------------
+
+        if (!isValid) {
+
+            otpRecord.attempts += 1;
+
+            await otpRecord.save();
+
+            return res.status(400).json({
+                success: false,
+                message: "Invalid OTP",
+                attemptsRemaining: 5 - otpRecord.attempts,
+            });
+        }
+
+        // ----------------------------------------------------
+        // OTP VERIFIED
+        // ----------------------------------------------------
+
+        await OTP.deleteOne({
+            _id: otpRecord._id,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "OTP verified successfully",
+        });
+
+    } catch (error) {
+
+        console.error(
+            "VERIFY OTP ERROR:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
 
 // ============================================================
 // EXPORT
@@ -106,4 +227,5 @@ const sendOTP = async (req, res) => {
 
 module.exports = {
     sendOTP,
+    verifyOTP,
 };
