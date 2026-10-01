@@ -67,7 +67,8 @@ const addLabOrder = async (req, res) => {
     // --------------------------------------------------------
 
     const finalBookingType =
-      String(bookingType || "TEST").toUpperCase() === "PRESCRIPTION"
+      String(bookingType || "TEST").toUpperCase() ===
+      "PRESCRIPTION"
         ? "PRESCRIPTION"
         : "TEST";
 
@@ -183,77 +184,54 @@ const addLabOrder = async (req, res) => {
     const order = await LabOrder.create({
       patientId: String(patientId).trim(),
 
-      patientName:
-        String(patientName).trim(),
+      patientName: String(patientName).trim(),
 
-      patientPhone:
-        String(patientPhone || "").trim(),
+      patientPhone: String(patientPhone || "").trim(),
 
-      doctorName:
-        String(doctorName || "").trim(),
+      doctorName: String(doctorName || "").trim(),
 
-      bookingType:
-        finalBookingType,
+      bookingType: finalBookingType,
 
-      tests:
-        finalTests,
+      tests: finalTests,
 
-      labId:
-        String(lab._id),
+      labId: String(lab._id),
 
-      labName:
-        String(lab.name || ""),
+      labName: String(lab.name || ""),
 
-      address:
-        String(address || "").trim(),
+      address: String(address || "").trim(),
 
-      notes:
-        String(notes || "").trim(),
+      notes: String(notes || "").trim(),
 
-      totalAmount:
-        totalAmount,
+      totalAmount: totalAmount,
 
-      paymentStatus:
-        "Pending",
+      paymentStatus: "Pending",
 
-      razorpayOrderId:
-        "",
+      razorpayOrderId: "",
 
-      razorpayPaymentId:
-        "",
+      razorpayPaymentId: "",
 
-      razorpaySignature:
-        "",
+      razorpaySignature: "",
 
-      paymentRecordId:
-        "",
+      paymentRecordId: "",
 
       prescriptionImage:
         String(prescriptionImage || "").trim(),
 
-      collectionMode:
-        finalCollectionMode,
+      collectionMode: finalCollectionMode,
 
-      collectorId:
-        "",
+      collectorId: "",
 
-      collectorName:
-        "",
+      collectorName: "",
 
-      collectorPhone:
-        "",
+      collectorPhone: "",
 
-      collectorStatus:
-        "Not Assigned",
+      collectorStatus: "Not Assigned",
 
-      status:
-        "Pending",
+      status: "Pending",
 
-      reports:
-        [],
+      reports: [],
 
-      reportUploadedAt:
-        null,
+      reportUploadedAt: null,
     });
 
     // --------------------------------------------------------
@@ -287,7 +265,6 @@ const addLabOrder = async (req, res) => {
 
       order,
     });
-
   } catch (error) {
     console.error(
       "ADD LAB ORDER ERROR:",
@@ -302,7 +279,6 @@ const addLabOrder = async (req, res) => {
     });
   }
 };
-
 
 // ============================================================
 // GET ALL LAB ORDERS
@@ -321,7 +297,6 @@ const getLabOrders = async (req, res) => {
       success: true,
       orders,
     });
-
   } catch (error) {
     console.error(
       "GET LAB ORDERS ERROR:",
@@ -334,7 +309,6 @@ const getLabOrders = async (req, res) => {
     });
   }
 };
-
 
 // ============================================================
 // GET SINGLE LAB ORDER
@@ -358,7 +332,6 @@ const getLabOrderById = async (req, res) => {
       success: true,
       order,
     });
-
   } catch (error) {
     console.error(
       "GET SINGLE LAB ORDER ERROR:",
@@ -371,7 +344,6 @@ const getLabOrderById = async (req, res) => {
     });
   }
 };
-
 
 // ============================================================
 // ACCEPT LAB BOOKING
@@ -408,7 +380,6 @@ const acceptLabOrder = async (req, res) => {
       message: "Lab booking accepted",
       order,
     });
-
   } catch (error) {
     console.error(
       "ACCEPT LAB ORDER ERROR:",
@@ -421,7 +392,6 @@ const acceptLabOrder = async (req, res) => {
     });
   }
 };
-
 
 // ============================================================
 // REJECT LAB BOOKING
@@ -450,7 +420,6 @@ const rejectLabOrder = async (req, res) => {
       message: "Lab booking rejected",
       order,
     });
-
   } catch (error) {
     console.error(
       "REJECT LAB ORDER ERROR:",
@@ -463,7 +432,6 @@ const rejectLabOrder = async (req, res) => {
     });
   }
 };
-
 
 // ============================================================
 // ASSIGN SAMPLE COLLECTOR
@@ -614,7 +582,6 @@ const assignSampleCollector = async (
       order,
       collector,
     });
-
   } catch (error) {
     console.error(
       "ASSIGN COLLECTOR ERROR:",
@@ -627,7 +594,6 @@ const assignSampleCollector = async (
     });
   }
 };
-
 
 // ============================================================
 // COLLECTOR ON THE WAY
@@ -676,7 +642,6 @@ const collectorOnTheWay = async (
         "Collector is on the way",
       order,
     });
-
   } catch (error) {
     console.error(
       "COLLECTOR ON WAY ERROR:",
@@ -689,7 +654,6 @@ const collectorOnTheWay = async (
     });
   }
 };
-
 
 // ============================================================
 // SAMPLE COLLECTED
@@ -768,7 +732,6 @@ const markSampleCollected = async (
         "Sample collected successfully",
       order,
     });
-
   } catch (error) {
     console.error(
       "SAMPLE COLLECTED ERROR:",
@@ -781,7 +744,6 @@ const markSampleCollected = async (
     });
   }
 };
-
 
 // ============================================================
 // SAMPLE RECEIVED AT LAB
@@ -856,7 +818,6 @@ const markSampleReceived = async (
         "Sample received at laboratory",
       order,
     });
-
   } catch (error) {
     console.error(
       "SAMPLE RECEIVED ERROR:",
@@ -869,7 +830,6 @@ const markSampleReceived = async (
     });
   }
 };
-
 
 // ============================================================
 // START TESTING
@@ -915,7 +875,6 @@ const startTesting = async (
         "Testing started",
       order,
     });
-
   } catch (error) {
     console.error(
       "START TESTING ERROR:",
@@ -928,7 +887,6 @@ const startTesting = async (
     });
   }
 };
-
 
 // ============================================================
 // GENERAL STATUS UPDATE
@@ -1021,7 +979,6 @@ const updateLabOrderStatus = async (
         "Lab order status updated",
       order,
     });
-
   } catch (error) {
     console.error(
       "UPDATE STATUS ERROR:",
@@ -1034,7 +991,6 @@ const updateLabOrderStatus = async (
     });
   }
 };
-
 
 // ============================================================
 // UPLOAD LAB REPORT
@@ -1163,7 +1119,6 @@ const uploadReport = async (
           }
 
           return {
-
             reportName:
               reportName,
 
@@ -1297,7 +1252,8 @@ const uploadReport = async (
 // 3. MSG91 sends SMS directly to patient.
 // 4. Flutter receives reqId.
 //
-// Backend DOES NOT call MSG91 sendOtp anymore.
+// Backend DOES NOT call MSG91 sendOtp.
+// Backend only prepares the local OTP session.
 // ============================================================
 
 const generateCollectionOtp = async (
@@ -1305,9 +1261,14 @@ const generateCollectionOtp = async (
   res
 ) => {
   try {
+
     const {
       id,
     } = req.params;
+
+    // --------------------------------------------------------
+    // FIND LAB ORDER
+    // --------------------------------------------------------
 
     const labOrder =
       await LabOrder.findById(
@@ -1371,11 +1332,14 @@ const generateCollectionOtp = async (
     // --------------------------------------------------------
     // START A NEW LOCAL OTP SESSION
     //
-    // The actual OTP is managed by MSG91.
-    // We NEVER store the OTP itself.
+    // IMPORTANT:
+    // We DO NOT generate or store the actual OTP.
+    //
+    // MSG91 Flutter SDK handles the actual OTP.
     // --------------------------------------------------------
 
-    labOrder.collectionOtpReqId = "";
+    labOrder.collectionOtpReqId =
+      "";
 
     labOrder.collectionOtpExpiresAt =
       new Date(
@@ -1396,6 +1360,51 @@ const generateCollectionOtp = async (
 
     await labOrder.save();
 
+    // --------------------------------------------------------
+    // LOG
+    // --------------------------------------------------------
+
+    console.log(
+      "================================"
+    );
+
+    console.log(
+      "COLLECTION OTP SESSION PREPARED"
+    );
+
+    console.log(
+      "ORDER ID =",
+      labOrder._id.toString()
+    );
+
+    console.log(
+      "PATIENT =",
+      labOrder.patientName
+    );
+
+    console.log(
+      "STATUS =",
+      labOrder.status
+    );
+
+    console.log(
+      "COLLECTION MODE =",
+      labOrder.collectionMode
+    );
+
+    console.log(
+      "OTP EXPIRES AT =",
+      labOrder.collectionOtpExpiresAt
+    );
+
+    console.log(
+      "================================"
+    );
+
+    // --------------------------------------------------------
+    // RESPONSE
+    // --------------------------------------------------------
+
     return res.status(200).json({
       success: true,
 
@@ -1409,20 +1418,21 @@ const generateCollectionOtp = async (
   } catch (error) {
 
     console.error(
-      "❌ generateCollectionOtp error:",
+      "GENERATE COLLECTION OTP ERROR:",
       error
     );
 
     return res.status(500).json({
       success: false,
+
       message:
         "Failed to prepare collection OTP.",
+
       error:
         error.message,
     });
   }
 };
-
 
 // ============================================================
 // VERIFY COLLECTION OTP
@@ -1449,6 +1459,7 @@ const verifyCollectionOtp = async (
   res
 ) => {
   try {
+
     const {
       id,
     } = req.params;
@@ -1584,7 +1595,10 @@ const verifyCollectionOtp = async (
     // --------------------------------------------------------
     // MSG91 SERVER AUTH KEY
     //
-    // NEVER put this key inside Flutter.
+    // IMPORTANT:
+    // This key must ONLY exist in backend environment variables.
+    //
+    // NEVER put MSG91_AUTH_KEY inside Flutter.
     // --------------------------------------------------------
 
     const authKey =
@@ -1625,6 +1639,10 @@ const verifyCollectionOtp = async (
         }
       );
 
+    // --------------------------------------------------------
+    // READ MSG91 RESPONSE
+    // --------------------------------------------------------
+
     let data = {};
 
     try {
@@ -1634,15 +1652,22 @@ const verifyCollectionOtp = async (
       data = {};
     }
 
-    // IMPORTANT:
-    // Never log accessToken.
+    // --------------------------------------------------------
+    // SAFE LOGGING
+    //
+    // DO NOT LOG:
+    // - Auth Key
+    // - Access Token
+    // - OTP
+    // --------------------------------------------------------
+
     console.log(
-      "🔐 MSG91 VERIFY ACCESS TOKEN STATUS:",
+      "MSG91 VERIFY ACCESS TOKEN STATUS:",
       response.status
     );
 
     console.log(
-      "🔐 MSG91 VERIFY ACCESS TOKEN RESPONSE KEYS:",
+      "MSG91 VERIFY RESPONSE KEYS:",
       Object.keys(
         data || {}
       )
@@ -1657,6 +1682,7 @@ const verifyCollectionOtp = async (
       data.type ===
         "error"
     ) {
+
       labOrder.collectionOtpAttempts +=
         1;
 
@@ -1678,9 +1704,9 @@ const verifyCollectionOtp = async (
       });
     }
 
-    // --------------------------------------------------------
-    // EXTRACT VERIFIED MOBILE / IDENTIFIER
-    // --------------------------------------------------------
+    // ========================================================
+    // FIND VERIFIED MOBILE NUMBER
+    // ========================================================
 
     const findVerifiedPhone = (
       value
@@ -1703,6 +1729,10 @@ const verifyCollectionOtp = async (
         "mobile_number",
         "phone_number",
       ];
+
+      // ------------------------------------------------------
+      // CHECK CURRENT OBJECT
+      // ------------------------------------------------------
 
       for (
         const key of possibleKeys
@@ -1736,6 +1766,10 @@ const verifyCollectionOtp = async (
         }
       }
 
+      // ------------------------------------------------------
+      // SEARCH NESTED OBJECTS
+      // ------------------------------------------------------
+
       for (
         const nestedValue of Object.values(
           value
@@ -1767,9 +1801,9 @@ const verifyCollectionOtp = async (
         data
       );
 
-    // --------------------------------------------------------
+    // ========================================================
     // NORMALIZE INDIAN PHONE NUMBERS
-    // --------------------------------------------------------
+    // ========================================================
 
     const normalizeIndianPhone = (
       phone
@@ -1783,6 +1817,7 @@ const verifyCollectionOtp = async (
           ""
         );
 
+      // 9876543210
       if (
         digits.length ===
         10
@@ -1790,6 +1825,7 @@ const verifyCollectionOtp = async (
         return digits;
       }
 
+      // 919876543210
       if (
         digits.length ===
           12 &&
@@ -1810,16 +1846,17 @@ const verifyCollectionOtp = async (
         labOrder.patientPhone
       );
 
-    // --------------------------------------------------------
+    // ========================================================
     // SECURITY CHECK
     //
-    // Token must belong to same patient mobile.
-    // --------------------------------------------------------
+    // MSG91 verified mobile must match
+    // the patient's registered mobile.
+    // ========================================================
 
     if (!verifiedPhone) {
 
       console.error(
-        "❌ MSG91 verification succeeded but verified mobile was not returned."
+        "MSG91 verification succeeded but verified mobile was not returned."
       );
 
       return res.status(400).json({
@@ -1834,6 +1871,10 @@ const verifyCollectionOtp = async (
         verifiedPhone
       );
 
+    // --------------------------------------------------------
+    // MOBILE NUMBER MUST MATCH
+    // --------------------------------------------------------
+
     if (
       !expectedPhone ||
       normalizedVerifiedPhone !==
@@ -1841,7 +1882,7 @@ const verifyCollectionOtp = async (
     ) {
 
       console.error(
-        "❌ MSG91 token mobile does not match the lab order patient mobile."
+        "MSG91 token mobile does not match the lab order patient mobile."
       );
 
       labOrder.collectionOtpAttempts +=
@@ -1910,14 +1951,22 @@ const verifyCollectionOtp = async (
       );
     }
 
+    // --------------------------------------------------------
+    // SAVE ORDER
+    // --------------------------------------------------------
+
     await labOrder.save();
+
+    // --------------------------------------------------------
+    // SUCCESS LOG
+    // --------------------------------------------------------
 
     console.log(
       "================================"
     );
 
     console.log(
-      "✅ COLLECTION OTP VERIFIED"
+      "COLLECTION OTP VERIFIED"
     );
 
     console.log(
@@ -1939,6 +1988,10 @@ const verifyCollectionOtp = async (
       "================================"
     );
 
+    // --------------------------------------------------------
+    // SUCCESS RESPONSE
+    // --------------------------------------------------------
+
     return res.status(200).json({
       success: true,
 
@@ -1955,7 +2008,7 @@ const verifyCollectionOtp = async (
   } catch (error) {
 
     console.error(
-      "❌ verifyCollectionOtp error:",
+      "VERIFY COLLECTION OTP ERROR:",
       error
     );
 
@@ -1971,38 +2024,23 @@ const verifyCollectionOtp = async (
   }
 };
 
-
 // ============================================================
 // EXPORTS
 // ============================================================
 
 module.exports = {
-
   addLabOrder,
-
   getLabOrders,
-
   getLabOrderById,
-
   acceptLabOrder,
-
   rejectLabOrder,
-
   assignSampleCollector,
-
   collectorOnTheWay,
-
   markSampleCollected,
-
   markSampleReceived,
-
   startTesting,
-
   updateLabOrderStatus,
-
   uploadReport,
-
   generateCollectionOtp,
-
   verifyCollectionOtp,
 };
