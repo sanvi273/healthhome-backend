@@ -1673,6 +1673,10 @@ const verifyCollectionOtp = async (
       )
     );
 
+console.log("🔐 MSG91 VERIFY ACCESS TOKEN MESSAGE:", data?.message || "");
+console.log("🔐 MSG91 VERIFY ACCESS TOKEN CODE:", data?.code || "");
+console.log("🔐 MSG91 VERIFY ACCESS TOKEN TYPE:", data?.type || "");
+
     // --------------------------------------------------------
     // MSG91 TOKEN VERIFICATION FAILED
     // --------------------------------------------------------
