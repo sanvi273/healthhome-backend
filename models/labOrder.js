@@ -276,10 +276,7 @@ const labOrderSchema = new mongoose.Schema(
       default: "",
     },
 
-    collectionOtpReqId: {
-  type: String,
-  default: "",
-},
+  
 
     collectionOtpExpiresAt: {
       type: Date,

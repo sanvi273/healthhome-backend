@@ -3,16 +3,29 @@ const express = require("express");
 const router = express.Router();
 
 const {
+
   placeOrder,
+
   placePrescriptionOrder,
+
   confirmPrescriptionOrder,
+
   getPharmacyOrders,
+
   getPatientOrders,
+
   updateOrderStatus,
+
   assignDeliveryAgent,
+
   removeDeliveryAgent,
+
+  verifyDeliveryOtp,
+
   collectCODPayment,
+
   getAllOrders,
+
 } = require("../controllers/orderController");
 
 // ============================================================
@@ -20,22 +33,19 @@ const {
 // ============================================================
 
 router.get("/test", (req, res) => {
+
   res.json({
+
     success: true,
+
     message: "Order API working",
+
   });
+
 });
 
 // ============================================================
 // NORMAL MEDICINE ORDER
-// ============================================================
-//
-// Patient selects medicines
-//        ↓
-// Backend verifies medicine prices
-//        ↓
-// Creates MEDICINE order
-//
 // ============================================================
 
 router.post("/place", placeOrder);
@@ -43,38 +53,19 @@ router.post("/place", placeOrder);
 // ============================================================
 // PRESCRIPTION IMAGE ORDER
 // ============================================================
-//
-// Patient uploads prescription
-//        ↓
-// Creates PRESCRIPTION order
-//        ↓
-// Initial amount = ₹0
-//        ↓
-// Pharmacy confirms medicines
-//
-// ============================================================
 
 router.post("/prescription", placePrescriptionOrder);
 
 // ============================================================
 // CONFIRM PRESCRIPTION ORDER
 // ============================================================
-//
-// Pharmacy checks prescription
-//        ↓
-// Selects medicines
-//        ↓
-// Backend gets real prices from MongoDB
-//        ↓
-// Calculates final amount
-//        ↓
-// Order becomes Accepted
-//
-// ============================================================
 
 router.put(
+
   "/prescription/confirm/:id",
+
   confirmPrescriptionOrder
+
 );
 
 // ============================================================
@@ -88,8 +79,11 @@ router.get("/all", getAllOrders);
 // ============================================================
 
 router.get(
+
   "/pharmacy/:pharmacyId",
+
   getPharmacyOrders
+
 );
 
 // ============================================================
@@ -97,26 +91,23 @@ router.get(
 // ============================================================
 
 router.get(
+
   "/patient/:phone",
+
   getPatientOrders
+
 );
 
 // ============================================================
 // UPDATE ORDER STATUS
 // ============================================================
-//
-// Pending
-// Accepted
-// Packed
-// Out for Delivery
-// Delivered
-// Rejected
-//
-// ============================================================
 
 router.put(
+
   "/status/:id",
+
   updateOrderStatus
+
 );
 
 // ============================================================
@@ -124,8 +115,11 @@ router.put(
 // ============================================================
 
 router.put(
+
   "/delivery-agent/:id",
+
   assignDeliveryAgent
+
 );
 
 // ============================================================
@@ -133,8 +127,39 @@ router.put(
 // ============================================================
 
 router.put(
+
   "/delivery-agent/remove/:id",
+
   removeDeliveryAgent
+
+);
+
+// ============================================================
+// VERIFY DELIVERY OTP
+// ============================================================
+//
+// Delivery flow:
+//
+// Accepted
+//    ↓
+// Packed
+//    ↓
+// Out for Delivery
+//    ↓
+// Patient gives OTP
+//    ↓
+// Delivery partner verifies OTP
+//    ↓
+// Delivered
+//
+// ============================================================
+
+router.put(
+
+  "/delivery-otp/:id",
+
+  verifyDeliveryOtp
+
 );
 
 // ============================================================
@@ -142,8 +167,11 @@ router.put(
 // ============================================================
 
 router.put(
+
   "/cod/collect/:id",
+
   collectCODPayment
+
 );
 
 // ============================================================

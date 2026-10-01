@@ -1,3 +1,5 @@
+const crypto = require("crypto");
+
 const Order = require("../models/orderModel");
 const Medicine = require("../models/medicine");
 const Pharmacy = require("../models/pharmacy");
@@ -19,6 +21,27 @@ const normalizePaymentMethod = (paymentMethod) => {
   }
 
   return "COD";
+};
+
+// ============================================================
+// HELPER: GENERATE DELIVERY OTP
+// ============================================================
+
+const generateDeliveryOtp = () => {
+  return crypto
+    .randomInt(100000, 1000000)
+    .toString();
+};
+
+// ============================================================
+// HELPER: HASH DELIVERY OTP
+// ============================================================
+
+const hashDeliveryOtp = (otp) => {
+  return crypto
+    .createHash("sha256")
+    .update(otp)
+    .digest("hex");
 };
 
 // ============================================================
@@ -392,10 +415,6 @@ const findPharmacy = async ({
 
   return pharmacy;
 };
-
-// ============================================================
-// PLACE NORMAL MEDICINE ORDER
-// ============================================================
 
 const placeOrder = async (
   req,
@@ -1038,20 +1057,20 @@ const placePrescriptionOrder =
 
           medicines: [],
 
-// Prescription processing fee
-subtotal: 500,
+          // Prescription processing fee
+          subtotal: 500,
 
-deliveryFee: 0,
+          deliveryFee: 0,
 
-discount: 0,
+          discount: 0,
 
-totalAmount: 500,
+          totalAmount: 500,
 
-paymentMethod:
-  "ONLINE",
+          paymentMethod:
+            "ONLINE",
 
-paymentStatus:
-  "Pending",
+          paymentStatus:
+            "Pending",
 
           settlementStatus:
             "Pending",
@@ -1133,25 +1152,37 @@ paymentStatus:
           medicines:
             order.medicines,
 
-          subtotal: 0,
+          subtotal:
+            Number(
+              order.subtotal
+            ),
 
-          deliveryFee: 0,
+          deliveryFee:
+            Number(
+              order.deliveryFee
+            ),
 
-          discount: 0,
+          discount:
+            Number(
+              order.discount
+            ),
 
-          totalAmount: 0,
+          totalAmount:
+            Number(
+              order.totalAmount
+            ),
+
+          currency:
+            order.currency,
 
           paymentMethod:
-            "COD",
+            order.paymentMethod,
 
           paymentStatus:
-            "Pending",
+            order.paymentStatus,
 
           status:
-            "Pending",
-
-          acceptedAt:
-            null,
+            order.status,
 
           createdAt:
             order.createdAt,
@@ -1490,8 +1521,6 @@ const confirmPrescriptionOrder =
 
       // IMPORTANT:
       // Save exact acceptance time.
-      // Pharmacy Dashboard uses acceptedAt
-      // to show newest accepted orders first.
 
       if (!order.acceptedAt) {
         order.acceptedAt =
@@ -1626,7 +1655,7 @@ const getPatientOrders =
     }
   };
 
-// ============================================================
+  // ============================================================
 // UPDATE ORDER STATUS
 // ============================================================
 
@@ -1676,6 +1705,29 @@ const updateOrderStatus =
       }
 
       // ======================================================
+      // DELIVERY OTP SECURITY
+      // ======================================================
+      //
+      // Delivered CANNOT be set directly.
+      //
+      // Delivery person must verify the
+      // patient's OTP first.
+      //
+      // ======================================================
+
+      if (
+        status === "Delivered"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Delivery OTP verification is required before marking the order as Delivered.",
+          requiresDeliveryOtp:
+            true,
+        });
+      }
+
+      // ======================================================
       // UNCONFIRMED PRESCRIPTION
       // ======================================================
 
@@ -1704,8 +1756,7 @@ const updateOrderStatus =
         if (
           status === "Packed" ||
           status ===
-            "Out for Delivery" ||
-          status === "Delivered"
+            "Out for Delivery"
         ) {
           return res.status(400).json({
             success: false,
@@ -1777,6 +1828,84 @@ const updateOrderStatus =
       }
 
       // ======================================================
+      // GENERATE DELIVERY OTP
+      // ======================================================
+      //
+      // OTP is generated ONLY when the order
+      // actually moves to Out for Delivery.
+      //
+      // OTP:
+      // - 6 digits
+      // - valid for 10 minutes
+      // - SHA-256 hash stored in MongoDB
+      // - actual OTP returned only for testing
+      //
+      // ======================================================
+
+      let generatedDeliveryOtp =
+        null;
+
+      if (
+        status ===
+          "Out for Delivery" &&
+        order.status !==
+          "Out for Delivery"
+      ) {
+        generatedDeliveryOtp =
+          generateDeliveryOtp();
+
+        order.deliveryOtpHash =
+          hashDeliveryOtp(
+            generatedDeliveryOtp
+          );
+
+        order.deliveryOtpExpiresAt =
+          new Date(
+            Date.now() +
+              10 * 60 * 1000
+          );
+
+        order.deliveryOtpAttempts =
+          0;
+
+        order.deliveryOtpVerified =
+          false;
+
+        order.deliveryOtpSentAt =
+          new Date();
+
+        console.log("");
+        console.log(
+          "=================================================="
+        );
+        console.log(
+          "========== PHARMACY DELIVERY OTP ================"
+        );
+        console.log(
+          "=================================================="
+        );
+        console.log(
+          "ORDER ID =",
+          order._id
+        );
+        console.log(
+          "PATIENT PHONE =",
+          order.patientPhone
+        );
+        console.log(
+          "DELIVERY OTP =",
+          generatedDeliveryOtp
+        );
+        console.log(
+          "EXPIRES AT =",
+          order.deliveryOtpExpiresAt
+        );
+        console.log(
+          "=================================================="
+        );
+      }
+
+      // ======================================================
       // STATUS
       // ======================================================
 
@@ -1813,14 +1942,49 @@ const updateOrderStatus =
 
       await order.save();
 
-      return res.status(200).json({
+      // ======================================================
+      // RESPONSE
+      // ======================================================
+
+      const response = {
         success: true,
 
         message:
           "Order status updated successfully.",
 
         order,
-      });
+      };
+
+      // ======================================================
+      // TESTING ONLY
+      // ======================================================
+      //
+      // Currently MSG91 is NOT being used.
+      //
+      // Therefore return the OTP in the API response
+      // so we can test the complete flow.
+      //
+      // Later, when Patient-side OTP UI is ready,
+      // this can be changed.
+      //
+      // ======================================================
+
+      if (
+        generatedDeliveryOtp
+      ) {
+        response.deliveryOtp =
+          generatedDeliveryOtp;
+
+        response.deliveryOtpExpiresAt =
+          order.deliveryOtpExpiresAt;
+
+        response.testingOnly =
+          true;
+      }
+
+      return res.status(200).json(
+        response
+      );
     } catch (error) {
       console.error(
         "UPDATE ORDER STATUS ERROR:",
@@ -1836,7 +2000,7 @@ const updateOrderStatus =
     }
   };
 
-// ============================================================
+  // ============================================================
 // ASSIGN DELIVERY PARTNER
 // ============================================================
 
@@ -2061,6 +2225,253 @@ const removeDeliveryAgent =
   };
 
 // ============================================================
+// VERIFY DELIVERY OTP
+// ============================================================
+
+const verifyDeliveryOtp =
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const {
+        otp,
+      } = req.body;
+
+      // ======================================================
+      // OTP VALIDATION
+      // ======================================================
+
+      if (
+        !otp ||
+        !/^\d{6}$/.test(
+          String(otp).trim()
+        )
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "A valid 6-digit delivery OTP is required.",
+        });
+      }
+
+      const enteredOtp =
+        String(
+          otp
+        ).trim();
+
+      // ======================================================
+      // FIND ORDER
+      // ======================================================
+
+      const order =
+        await Order.findById(
+          req.params.id
+        );
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "Order not found.",
+        });
+      }
+
+      // ======================================================
+      // STATUS CHECK
+      // ======================================================
+
+      if (
+        order.status !==
+        "Out for Delivery"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Delivery OTP can only be verified when the order is Out for Delivery.",
+        });
+      }
+
+      // ======================================================
+      // ALREADY VERIFIED
+      // ======================================================
+
+      if (
+        order.deliveryOtpVerified
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Delivery OTP has already been verified.",
+        });
+      }
+
+      // ======================================================
+      // OTP HASH CHECK
+      // ======================================================
+
+      if (
+        !order.deliveryOtpHash
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Delivery OTP has not been generated for this order.",
+        });
+      }
+
+      // ======================================================
+      // MAX ATTEMPTS
+      // ======================================================
+
+      if (
+        Number(
+          order.deliveryOtpAttempts
+        ) >= 5
+      ) {
+        return res.status(429).json({
+          success: false,
+          message:
+            "Maximum delivery OTP attempts exceeded. Delivery verification is blocked.",
+          attempts:
+            order.deliveryOtpAttempts,
+        });
+      }
+
+      // ======================================================
+      // EXPIRY CHECK
+      // ======================================================
+
+      if (
+        !order.deliveryOtpExpiresAt ||
+        new Date() >
+          new Date(
+            order.deliveryOtpExpiresAt
+          )
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Delivery OTP has expired. Please generate a new delivery OTP.",
+          expired:
+            true,
+        });
+      }
+
+      // ======================================================
+      // HASH ENTERED OTP
+      // ======================================================
+
+      const enteredOtpHash =
+        hashDeliveryOtp(
+          enteredOtp
+        );
+
+      // ======================================================
+      // WRONG OTP
+      // ======================================================
+
+      if (
+        enteredOtpHash !==
+        order.deliveryOtpHash
+      ) {
+        order.deliveryOtpAttempts =
+          Number(
+            order.deliveryOtpAttempts
+          ) + 1;
+
+        await order.save();
+
+        const remainingAttempts =
+          Math.max(
+            0,
+            5 -
+              Number(
+                order.deliveryOtpAttempts
+              )
+          );
+
+        return res.status(400).json({
+          success: false,
+          message:
+            remainingAttempts === 0
+              ? "Incorrect OTP. Maximum attempts exceeded."
+              : "Incorrect delivery OTP.",
+
+          attempts:
+            order.deliveryOtpAttempts,
+
+          remainingAttempts,
+        });
+      }
+
+      // ======================================================
+      // CORRECT OTP
+      // ======================================================
+
+      order.deliveryOtpVerified =
+        true;
+
+      order.deliveryOtpAttempts =
+        Number(
+          order.deliveryOtpAttempts
+        );
+
+      order.status =
+        "Delivered";
+
+      await order.save();
+
+      console.log("");
+      console.log(
+        "=================================================="
+      );
+      console.log(
+        "========= DELIVERY OTP VERIFIED =================="
+      );
+      console.log(
+        "=================================================="
+      );
+      console.log(
+        "ORDER ID =",
+        order._id
+      );
+      console.log(
+        "STATUS =",
+        order.status
+      );
+      console.log(
+        "OTP VERIFIED =",
+        order.deliveryOtpVerified
+      );
+      console.log(
+        "=================================================="
+      );
+
+      return res.status(200).json({
+        success: true,
+
+        message:
+          "Delivery OTP verified successfully. Order marked as Delivered.",
+
+        order,
+      });
+    } catch (error) {
+      console.error(
+        "VERIFY DELIVERY OTP ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          error.message ||
+          "Unable to verify delivery OTP.",
+      });
+    }
+  };
+
+// ============================================================
 // COLLECT COD PAYMENT
 // ============================================================
 
@@ -2083,10 +2494,6 @@ const collectCODPayment =
         });
       }
 
-      // ======================================================
-      // PAYMENT METHOD
-      // ======================================================
-
       if (
         order.paymentMethod !==
           "COD" &&
@@ -2100,10 +2507,6 @@ const collectCODPayment =
         });
       }
 
-      // ======================================================
-      // ALREADY COLLECTED
-      // ======================================================
-
       if (
         order.cashCollected ||
         order.paymentStatus ===
@@ -2115,10 +2518,6 @@ const collectCODPayment =
             "COD payment has already been collected.",
         });
       }
-
-      // ======================================================
-      // DELIVERY STATUS
-      // ======================================================
 
       if (
         order.status !==
@@ -2132,10 +2531,6 @@ const collectCODPayment =
             "COD payment can only be collected during delivery.",
         });
       }
-
-      // ======================================================
-      // PRESCRIPTION FINAL AMOUNT
-      // ======================================================
 
       if (
         order.orderType ===
@@ -2154,10 +2549,6 @@ const collectCODPayment =
             "Prescription order has not been confirmed with a final amount.",
         });
       }
-
-      // ======================================================
-      // REPAIR NORMAL MEDICINE ORDER
-      // ======================================================
 
       if (
         order.orderType !==
@@ -2178,10 +2569,6 @@ const collectCODPayment =
           });
         }
       }
-
-      // ======================================================
-      // COLLECT
-      // ======================================================
 
       order.paymentStatus =
         "Collected";
@@ -2292,6 +2679,8 @@ module.exports = {
   assignDeliveryAgent,
 
   removeDeliveryAgent,
+
+  verifyDeliveryOtp,
 
   collectCODPayment,
 
