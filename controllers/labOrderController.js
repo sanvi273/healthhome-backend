@@ -1,5 +1,7 @@
 const LabOrder = require("../models/labOrder");
 const SampleCollector = require("../models/sampleCollector");
+const crypto = require("crypto");
+const axios = require("axios");
 
 // ============================================================
 // ADD LAB ORDER
@@ -1238,185 +1240,248 @@ const uploadReport = async (
   }
 };
 
+// ==========================================================
+// LAB COLLECTION OTP HELPERS
+// ==========================================================
 
-// ============================================================
-// PREPARE COLLECTION OTP
-//
-// IMPORTANT:
-//
-// MSG91 Widget Mobile SDK handles the actual OTP sending.
-//
-// Flutter:
-// 1. Calls this endpoint.
-// 2. Calls OTPWidget.sendOTP().
-// 3. MSG91 sends SMS directly to patient.
-// 4. Flutter receives reqId.
-//
-// Backend DOES NOT call MSG91 sendOtp.
-// Backend only prepares the local OTP session.
-// ============================================================
+const generateLabOtp = () => {
+  return crypto.randomInt(100000, 1000000).toString();
+};
 
-const generateCollectionOtp = async (
-  req,
-  res
-) => {
+const hashLabOtp = (otp) => {
+  return crypto
+    .createHash("sha256")
+    .update(otp)
+    .digest("hex");
+};
+
+const normalizeIndianPhone = (phone) => {
+  if (!phone) return "";
+
+  let value = String(phone).replace(/\D/g, "");
+
+  // 9876543210 -> 919876543210
+  if (value.length === 10) {
+    value = `91${value}`;
+  }
+
+  // +919876543210 / 919876543210
+  if (value.length === 12 && value.startsWith("91")) {
+    return value;
+  }
+
+  return value;
+};
+
+
+// ==========================================================
+// SEND LAB COLLECTION OTP THROUGH MSG91
+// ==========================================================
+
+const sendLabCollectionOtp = async (mobile, otp) => {
+  const authKey = process.env.MSG91_AUTH_KEY;
+  const templateId = process.env.MSG91_OTP_TEMPLATE_ID;
+
+  if (!authKey) {
+    throw new Error("MSG91_AUTH_KEY is missing");
+  }
+
+  if (!templateId) {
+    throw new Error("MSG91_OTP_TEMPLATE_ID is missing");
+  }
+
+  const phone = normalizeIndianPhone(mobile);
+
+  if (!phone || phone.length !== 12 || !phone.startsWith("91")) {
+    throw new Error("Invalid patient mobile number");
+  }
+
+  const url =
+    `https://control.msg91.com/api/v5/otp` +
+    `?template_id=${encodeURIComponent(templateId)}` +
+    `&mobile=${encodeURIComponent(phone)}`;
+
+  const response = await axios.post(
+    url,
+    {
+      OTP: otp,
+    },
+    {
+      headers: {
+        authkey: authKey,
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
+      timeout: 15000,
+    }
+  );
+
+  console.log("MSG91 OTP response:", response.data);
+
+  if (
+    response.data &&
+    response.data.type &&
+    response.data.type !== "success"
+  ) {
+    throw new Error(
+      response.data.message || "MSG91 failed to send OTP"
+    );
+  }
+
+  return response.data;
+};
+
+
+// ==========================================================
+// GENERATE LAB COLLECTION OTP
+// ==========================================================
+
+const generateCollectionOtp = async (req, res) => {
   try {
+    const { id } = req.params;
 
-    const {
-      id,
-    } = req.params;
+    console.log("==========================================");
+    console.log("LAB COLLECTION OTP REQUEST");
+    console.log("Order ID:", id);
+    console.log("==========================================");
 
-    // --------------------------------------------------------
-    // FIND LAB ORDER
-    // --------------------------------------------------------
-
-    const labOrder =
-      await LabOrder.findById(
-        id
-      );
+    const labOrder = await LabOrder.findById(id);
 
     if (!labOrder) {
       return res.status(404).json({
         success: false,
-        message:
-          "Lab order not found",
+        message: "Lab order not found",
       });
     }
 
-    // --------------------------------------------------------
-    // HOME COLLECTION ONLY
-    // --------------------------------------------------------
+    // ------------------------------------------------------
+    // ONLY HOME COLLECTION
+    // ------------------------------------------------------
 
-    if (
-      labOrder.collectionMode !==
-      "Home Collection"
-    ) {
+    if (labOrder.collectionMode !== "Home Collection") {
       return res.status(400).json({
         success: false,
-        message:
-          "OTP is required only for Home Collection.",
+        message: "OTP is required only for Home Collection",
       });
     }
 
-    // --------------------------------------------------------
+    // ------------------------------------------------------
     // COLLECTOR MUST BE ON THE WAY
-    // --------------------------------------------------------
+    // ------------------------------------------------------
 
-    if (
-      labOrder.status !==
-      "On The Way"
-    ) {
+    if (labOrder.status !== "On The Way") {
       return res.status(400).json({
         success: false,
         message:
-          "OTP can be sent only when collector is On The Way.",
+          "OTP can be generated only when the collector is On The Way",
       });
     }
 
-    // --------------------------------------------------------
+    // ------------------------------------------------------
     // PATIENT PHONE REQUIRED
-    // --------------------------------------------------------
+    // ------------------------------------------------------
+
+    if (!labOrder.patientPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "Patient phone number is missing",
+      });
+    }
+
+    // ------------------------------------------------------
+    // PREVENT GENERATING OTP AGAIN BEFORE EXPIRY
+    // ------------------------------------------------------
 
     if (
-      !String(
-        labOrder.patientPhone || ""
-      ).trim()
+      labOrder.collectionOtpExpiresAt &&
+      labOrder.collectionOtpExpiresAt > new Date() &&
+      !labOrder.collectionOtpVerified
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Patient phone number is not available.",
+          "An OTP is already active. Please use the existing OTP.",
+        expiresAt: labOrder.collectionOtpExpiresAt,
       });
     }
 
-    // --------------------------------------------------------
-    // START A NEW LOCAL OTP SESSION
-    //
-    // IMPORTANT:
-    // We DO NOT generate or store the actual OTP.
-    //
-    // MSG91 Flutter SDK handles the actual OTP.
-    // --------------------------------------------------------
+    // ------------------------------------------------------
+    // GENERATE 6 DIGIT OTP
+    // ------------------------------------------------------
 
-    labOrder.collectionOtpReqId =
-      "";
+    const otp = generateLabOtp();
 
-    labOrder.collectionOtpExpiresAt =
-      new Date(
-        Date.now() +
-        15 *
-          60 *
-          1000
-      );
+    console.log("Lab OTP generated for order:", id);
 
-    labOrder.collectionOtpAttempts =
-      0;
+    // ------------------------------------------------------
+    // HASH OTP BEFORE DATABASE STORAGE
+    // ------------------------------------------------------
 
-    labOrder.collectionOtpVerified =
-      false;
+    const otpHash = hashLabOtp(otp);
 
-    labOrder.collectionOtpSentAt =
-      new Date();
+    // ------------------------------------------------------
+    // 10 MINUTE EXPIRY
+    // ------------------------------------------------------
+
+    const expiresAt = new Date(
+      Date.now() + 10 * 60 * 1000
+    );
+
+    // ------------------------------------------------------
+    // RESET OTP SESSION
+    // ------------------------------------------------------
+
+    labOrder.collectionOtpHash = otpHash;
+    labOrder.collectionOtpExpiresAt = expiresAt;
+    labOrder.collectionOtpAttempts = 0;
+    labOrder.collectionOtpVerified = false;
+    labOrder.collectionOtpSentAt = new Date();
 
     await labOrder.save();
 
-    // --------------------------------------------------------
-    // LOG
-    // --------------------------------------------------------
+    // ------------------------------------------------------
+    // SEND OTP TO PATIENT
+    // ------------------------------------------------------
 
-    console.log(
-      "================================"
-    );
+    try {
+      await sendLabCollectionOtp(
+        labOrder.patientPhone,
+        otp
+      );
+    } catch (smsError) {
+      console.error(
+        "MSG91 OTP SEND ERROR:",
+        smsError.response?.data || smsError.message
+      );
 
-    console.log(
-      "COLLECTION OTP SESSION PREPARED"
-    );
+      // Roll back OTP session if SMS failed
+      labOrder.collectionOtpHash = "";
+      labOrder.collectionOtpExpiresAt = null;
+      labOrder.collectionOtpAttempts = 0;
+      labOrder.collectionOtpVerified = false;
+      labOrder.collectionOtpSentAt = null;
 
-    console.log(
-      "ORDER ID =",
-      labOrder._id.toString()
-    );
+      await labOrder.save();
 
-    console.log(
-      "PATIENT =",
-      labOrder.patientName
-    );
+      return res.status(500).json({
+        success: false,
+        message: "OTP could not be sent to patient",
+        error:
+          smsError.response?.data ||
+          smsError.message,
+      });
+    }
 
-    console.log(
-      "STATUS =",
-      labOrder.status
-    );
-
-    console.log(
-      "COLLECTION MODE =",
-      labOrder.collectionMode
-    );
-
-    console.log(
-      "OTP EXPIRES AT =",
-      labOrder.collectionOtpExpiresAt
-    );
-
-    console.log(
-      "================================"
-    );
-
-    // --------------------------------------------------------
-    // RESPONSE
-    // --------------------------------------------------------
+    // ------------------------------------------------------
+    // SUCCESS
+    // ------------------------------------------------------
 
     return res.status(200).json({
       success: true,
-
-      message:
-        "OTP session prepared. Send the OTP using the MSG91 Flutter SDK.",
-
-      expiresAt:
-        labOrder.collectionOtpExpiresAt,
+      message: "OTP sent successfully to patient",
+      expiresAt,
     });
-
   } catch (error) {
-
     console.error(
       "GENERATE COLLECTION OTP ERROR:",
       error
@@ -1424,593 +1489,232 @@ const generateCollectionOtp = async (
 
     return res.status(500).json({
       success: false,
-
-      message:
-        "Failed to prepare collection OTP.",
-
-      error:
-        error.message,
+      message: "Failed to generate collection OTP",
+      error: error.message,
     });
   }
 };
 
-// ============================================================
-// VERIFY COLLECTION OTP
-//
-// IMPORTANT:
-//
-// Flutter does the actual OTP verification using:
-//
-// OTPWidget.verifyOTP()
-//
-// MSG91 returns an access token.
-//
-// Flutter sends that access token here.
-//
-// Backend then calls:
-//
-// MSG91 verifyAccessToken
-//
-// Backend NEVER receives or stores the actual OTP.
-// ============================================================
 
-const verifyCollectionOtp = async (
-  req,
-  res
-) => {
+// ==========================================================
+// VERIFY LAB COLLECTION OTP
+// ==========================================================
+
+const verifyCollectionOtp = async (req, res) => {
   try {
+    const { id } = req.params;
+    const { otp } = req.body;
 
-    const {
-      id,
-    } = req.params;
+    console.log("==========================================");
+    console.log("LAB COLLECTION OTP VERIFY REQUEST");
+    console.log("Order ID:", id);
+    console.log("==========================================");
 
-    const {
-      accessToken,
-    } = req.body;
+    // ------------------------------------------------------
+    // OTP REQUIRED
+    // ------------------------------------------------------
 
-    // --------------------------------------------------------
-    // FIND LAB ORDER
-    // --------------------------------------------------------
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP is required",
+      });
+    }
 
-    const labOrder =
-      await LabOrder.findById(
-        id
-      );
+    const enteredOtp = String(otp).trim();
+
+    // ------------------------------------------------------
+    // OTP MUST BE 6 DIGITS
+    // ------------------------------------------------------
+
+    if (!/^\d{6}$/.test(enteredOtp)) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP must contain exactly 6 digits",
+      });
+    }
+
+    // ------------------------------------------------------
+    // FIND ORDER
+    // ------------------------------------------------------
+
+    const labOrder = await LabOrder.findById(id);
 
     if (!labOrder) {
       return res.status(404).json({
         success: false,
-        message:
-          "Lab order not found.",
+        message: "Lab order not found",
       });
     }
 
-    // --------------------------------------------------------
-    // HOME COLLECTION ONLY
-    // --------------------------------------------------------
+    // ------------------------------------------------------
+    // ONLY HOME COLLECTION
+    // ------------------------------------------------------
 
-    if (
-      labOrder.collectionMode !==
-      "Home Collection"
-    ) {
+    if (labOrder.collectionMode !== "Home Collection") {
       return res.status(400).json({
         success: false,
         message:
-          "OTP verification is only required for Home Collection.",
+          "OTP verification is required only for Home Collection",
       });
     }
 
-    // --------------------------------------------------------
+    // ------------------------------------------------------
     // COLLECTOR MUST BE ON THE WAY
-    // --------------------------------------------------------
+    // ------------------------------------------------------
 
-    if (
-      labOrder.status !==
-      "On The Way"
-    ) {
+    if (labOrder.status !== "On The Way") {
       return res.status(400).json({
         success: false,
         message:
-          "OTP can be verified only when collector is On The Way.",
+          "OTP can only be verified when collector is On The Way",
       });
     }
 
-    // --------------------------------------------------------
+    // ------------------------------------------------------
     // ALREADY VERIFIED
-    // --------------------------------------------------------
+    // ------------------------------------------------------
 
-    if (
-      labOrder.collectionOtpVerified ===
-      true
-    ) {
+    if (labOrder.collectionOtpVerified === true) {
       return res.status(400).json({
         success: false,
-        message:
-          "Collection OTP has already been verified.",
+        message: "OTP has already been verified",
       });
     }
 
-    // --------------------------------------------------------
-    // ACTIVE OTP SESSION REQUIRED
-    // --------------------------------------------------------
+    // ------------------------------------------------------
+    // OTP SESSION EXISTS?
+    // ------------------------------------------------------
 
-    if (
-      !labOrder.collectionOtpSentAt
-    ) {
+    if (!labOrder.collectionOtpHash) {
       return res.status(400).json({
         success: false,
         message:
-          "No active OTP session found. Please send a new OTP.",
+          "No active OTP found. Please generate a new OTP.",
       });
     }
 
-    // --------------------------------------------------------
-    // OTP SESSION EXPIRY
-    // --------------------------------------------------------
+    // ------------------------------------------------------
+    // EXPIRY CHECK
+    // ------------------------------------------------------
 
     if (
-      labOrder.collectionOtpExpiresAt &&
-      new Date() >
-        labOrder.collectionOtpExpiresAt
+      !labOrder.collectionOtpExpiresAt ||
+      labOrder.collectionOtpExpiresAt <= new Date()
     ) {
+      labOrder.collectionOtpHash = "";
+      labOrder.collectionOtpExpiresAt = null;
+      labOrder.collectionOtpAttempts = 0;
+      labOrder.collectionOtpSentAt = null;
+
+      await labOrder.save();
+
       return res.status(400).json({
         success: false,
         message:
-          "OTP session has expired. Please send a new OTP.",
+          "OTP has expired. Please generate a new OTP.",
       });
     }
 
-    // --------------------------------------------------------
-    // MAX BACKEND VERIFICATION ATTEMPTS
-    // --------------------------------------------------------
+    // ------------------------------------------------------
+    // MAX ATTEMPTS
+    // ------------------------------------------------------
+
+    const MAX_ATTEMPTS = 5;
 
     if (
-      labOrder.collectionOtpAttempts >=
-      5
+      labOrder.collectionOtpAttempts >= MAX_ATTEMPTS
     ) {
       return res.status(429).json({
         success: false,
         message:
-          "Maximum OTP verification attempts reached. Please send a new OTP.",
+          "Maximum OTP attempts exceeded. Please generate a new OTP.",
       });
     }
 
-    // --------------------------------------------------------
-    // ACCESS TOKEN REQUIRED
-    // --------------------------------------------------------
+    // ------------------------------------------------------
+    // COUNT ATTEMPT
+    // ------------------------------------------------------
+
+    labOrder.collectionOtpAttempts += 1;
+
+    // ------------------------------------------------------
+    // HASH ENTERED OTP
+    // ------------------------------------------------------
+
+    const enteredOtpHash = hashLabOtp(enteredOtp);
+
+    // ------------------------------------------------------
+    // COMPARE HASHES
+    // ------------------------------------------------------
 
     if (
-      !accessToken ||
-      typeof accessToken !==
-        "string" ||
-      !accessToken.trim()
+      enteredOtpHash !== labOrder.collectionOtpHash
     ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "MSG91 access token is required after OTP verification.",
-      });
-    }
-
-    // --------------------------------------------------------
-    // MSG91 SERVER AUTH KEY
-    //
-    // IMPORTANT:
-    // This key must ONLY exist in backend environment variables.
-    //
-    // NEVER put MSG91_AUTH_KEY inside Flutter.
-    // --------------------------------------------------------
-
-    const authKey =
-      process.env.MSG91_AUTH_KEY;
-
-    if (!authKey) {
-      return res.status(500).json({
-        success: false,
-        message:
-          "MSG91 server Auth Key is missing.",
-      });
-    }
-
-    // --------------------------------------------------------
-    // VERIFY ACCESS TOKEN WITH MSG91
-    // --------------------------------------------------------
-
-    const response =
-      await fetch(
-        "https://control.msg91.com/api/v5/widget/verifyAccessToken",
-        {
-          method:
-            "POST",
-
-          headers: {
-            "Content-Type":
-              "application/x-www-form-urlencoded",
-          },
-
-          body:
-            new URLSearchParams({
-              authkey:
-                authKey,
-
-              "access-token":
-                accessToken.trim(),
-            }).toString(),
-        }
-      );
-
-    // --------------------------------------------------------
-    // READ MSG91 RESPONSE
-    // --------------------------------------------------------
-
-    let data = {};
-
-    try {
-      data =
-        await response.json();
-    } catch (parseError) {
-      data = {};
-    }
-
-    // --------------------------------------------------------
-    // SAFE LOGGING
-    //
-    // DO NOT LOG:
-    // - Auth Key
-    // - Access Token
-    // - OTP
-    // --------------------------------------------------------
-
-    console.log(
-      "MSG91 VERIFY ACCESS TOKEN STATUS:",
-      response.status
-    );
-
-    console.log(
-      "MSG91 VERIFY RESPONSE KEYS:",
-      Object.keys(
-        data || {}
-      )
-    );
-
-console.log("🔐 MSG91 VERIFY ACCESS TOKEN MESSAGE:", data?.message || "");
-console.log("🔐 MSG91 VERIFY ACCESS TOKEN CODE:", data?.code || "");
-console.log("🔐 MSG91 VERIFY ACCESS TOKEN TYPE:", data?.type || "");
-
-    // --------------------------------------------------------
-    // MSG91 TOKEN VERIFICATION FAILED
-    // --------------------------------------------------------
-
-    if (
-      !response.ok ||
-      data.type ===
-        "error"
-    ) {
-
-      labOrder.collectionOtpAttempts +=
-        1;
-
       await labOrder.save();
 
-      return res.status(400).json({
-        success: false,
-
-        message:
-          data.message ||
-          "MSG91 access token verification failed. Please verify the OTP again.",
-
-        attemptsRemaining:
-          Math.max(
-            0,
-            5 -
-              labOrder.collectionOtpAttempts
-          ),
-      });
-    }
-
-    // ========================================================
-    // FIND VERIFIED MOBILE NUMBER
-    // ========================================================
-
-    const findVerifiedPhone = (
-      value
-    ) => {
-
-      if (
-        !value ||
-        typeof value !==
-          "object"
-      ) {
-        return null;
-      }
-
-      const possibleKeys = [
-        "mobile",
-        "mobileNumber",
-        "phone",
-        "phoneNumber",
-        "identifier",
-        "mobile_number",
-        "phone_number",
-      ];
-
-      // ------------------------------------------------------
-      // CHECK CURRENT OBJECT
-      // ------------------------------------------------------
-
-      for (
-        const key of possibleKeys
-      ) {
-
-        if (
-          Object.prototype.hasOwnProperty.call(
-            value,
-            key
-          ) &&
-          value[key] !==
-            null &&
-          value[key] !==
-            undefined
-        ) {
-
-          const raw =
-            String(
-              value[key]
-            ).replace(
-              /\D/g,
-              ""
-            );
-
-          if (
-            raw.length >=
-            10
-          ) {
-            return raw;
-          }
-        }
-      }
-
-      // ------------------------------------------------------
-      // SEARCH NESTED OBJECTS
-      // ------------------------------------------------------
-
-      for (
-        const nestedValue of Object.values(
-          value
-        )
-      ) {
-
-        if (
-          nestedValue &&
-          typeof nestedValue ===
-            "object"
-        ) {
-
-          const found =
-            findVerifiedPhone(
-              nestedValue
-            );
-
-          if (found) {
-            return found;
-          }
-        }
-      }
-
-      return null;
-    };
-
-    const verifiedPhone =
-      findVerifiedPhone(
-        data
-      );
-
-    // ========================================================
-    // NORMALIZE INDIAN PHONE NUMBERS
-    // ========================================================
-
-    const normalizeIndianPhone = (
-      phone
-    ) => {
-
-      const digits =
-        String(
-          phone || ""
-        ).replace(
-          /\D/g,
-          ""
-        );
-
-      // 9876543210
-      if (
-        digits.length ===
-        10
-      ) {
-        return digits;
-      }
-
-      // 919876543210
-      if (
-        digits.length ===
-          12 &&
-        digits.startsWith(
-          "91"
-        )
-      ) {
-        return digits.substring(
-          2
-        );
-      }
-
-      return digits;
-    };
-
-    const expectedPhone =
-      normalizeIndianPhone(
-        labOrder.patientPhone
-      );
-
-    // ========================================================
-    // SECURITY CHECK
-    //
-    // MSG91 verified mobile must match
-    // the patient's registered mobile.
-    // ========================================================
-
-    if (!verifiedPhone) {
-
-      console.error(
-        "MSG91 verification succeeded but verified mobile was not returned."
-      );
+      const remainingAttempts =
+        MAX_ATTEMPTS -
+        labOrder.collectionOtpAttempts;
 
       return res.status(400).json({
         success: false,
-        message:
-          "MSG91 verified the token, but the verified mobile number could not be confirmed for this order. Please send a new OTP.",
+        message: "Incorrect OTP",
+        remainingAttempts,
       });
     }
 
-    const normalizedVerifiedPhone =
-      normalizeIndianPhone(
-        verifiedPhone
-      );
+    // ------------------------------------------------------
+    // OTP CORRECT
+    // ------------------------------------------------------
 
-    // --------------------------------------------------------
-    // MOBILE NUMBER MUST MATCH
-    // --------------------------------------------------------
+    labOrder.collectionOtpVerified = true;
 
-    if (
-      !expectedPhone ||
-      normalizedVerifiedPhone !==
-        expectedPhone
-    ) {
+    labOrder.status = "Sample Collected";
 
-      console.error(
-        "MSG91 token mobile does not match the lab order patient mobile."
-      );
+    labOrder.collectorStatus = "Sample Collected";
 
-      labOrder.collectionOtpAttempts +=
-        1;
+    // ------------------------------------------------------
+    // CLEAR OTP DATA
+    // ------------------------------------------------------
 
-      await labOrder.save();
+    labOrder.collectionOtpHash = "";
+    labOrder.collectionOtpExpiresAt = null;
+    labOrder.collectionOtpAttempts = 0;
+    labOrder.collectionOtpSentAt = null;
 
-      return res.status(403).json({
-        success: false,
-
-        message:
-          "OTP verification does not match the patient's registered mobile number for this order.",
-
-        attemptsRemaining:
-          Math.max(
-            0,
-            5 -
-              labOrder.collectionOtpAttempts
-          ),
-      });
-    }
-
-    // ========================================================
-    // ACCESS TOKEN VERIFIED SUCCESSFULLY
-    // ========================================================
-
-    labOrder.collectionOtpVerified =
-      true;
-
-    labOrder.collectionOtpReqId =
-      "";
-
-    labOrder.collectionOtpExpiresAt =
-      null;
-
-    labOrder.collectionOtpAttempts =
-      0;
-
-    labOrder.collectionOtpSentAt =
-      null;
-
-    // --------------------------------------------------------
-    // MOVE ORDER TO SAMPLE COLLECTED
-    // --------------------------------------------------------
-
-    labOrder.status =
-      "Sample Collected";
-
-    labOrder.collectorStatus =
-      "Sample Collected";
-
-    // --------------------------------------------------------
+    // ------------------------------------------------------
     // FREE COLLECTOR
-    // --------------------------------------------------------
+    // ------------------------------------------------------
 
-    if (
-      labOrder.collectorId
-    ) {
-
+    if (labOrder.collectorId) {
       await SampleCollector.findByIdAndUpdate(
         labOrder.collectorId,
         {
-          availability:
-            "Available",
+          availability: "Available",
         }
       );
     }
 
-    // --------------------------------------------------------
-    // SAVE ORDER
-    // --------------------------------------------------------
-
     await labOrder.save();
 
-    // --------------------------------------------------------
-    // SUCCESS LOG
-    // --------------------------------------------------------
-
     console.log(
-      "================================"
+      "✅ LAB OTP VERIFIED - SAMPLE COLLECTED"
     );
 
-    console.log(
-      "COLLECTION OTP VERIFIED"
-    );
-
-    console.log(
-      "ORDER ID =",
-      labOrder._id.toString()
-    );
-
-    console.log(
-      "STATUS =",
-      labOrder.status
-    );
-
-    console.log(
-      "COLLECTOR STATUS =",
-      labOrder.collectorStatus
-    );
-
-    console.log(
-      "================================"
-    );
-
-    // --------------------------------------------------------
-    // SUCCESS RESPONSE
-    // --------------------------------------------------------
+    // ------------------------------------------------------
+    // SUCCESS
+    // ------------------------------------------------------
 
     return res.status(200).json({
       success: true,
-
       message:
-        "OTP verified successfully. Sample collection confirmed.",
-
-      status:
-        "Sample Collected",
-
-      orderId:
-        labOrder._id,
+        "Patient verified successfully. Sample collected.",
+      status: labOrder.status,
+      collectorStatus:
+        labOrder.collectorStatus,
     });
-
   } catch (error) {
-
     console.error(
       "VERIFY COLLECTION OTP ERROR:",
       error
@@ -2018,15 +1722,12 @@ console.log("🔐 MSG91 VERIFY ACCESS TOKEN TYPE:", data?.type || "");
 
     return res.status(500).json({
       success: false,
-
-      message:
-        "Failed to verify collection OTP.",
-
-      error:
-        error.message,
+      message: "Failed to verify collection OTP",
+      error: error.message,
     });
   }
 };
+
 
 // ============================================================
 // EXPORTS
