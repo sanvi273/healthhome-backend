@@ -8,18 +8,46 @@ const {
     updateOneSignalId,
 } = require("../controllers/authController");
 
+const {
+    sendOTP,
+} = require("../controllers/otpController");
+
 const router = express.Router();
 
+// ============================================================
 // REGISTER
-router.post("/register", registerUser);
+// ============================================================
 
+router.post(
+    "/register",
+    registerUser
+);
+
+// ============================================================
 // LOGIN
-router.post("/login", loginUser);
+// ============================================================
 
+router.post(
+    "/login",
+    loginUser
+);
+
+// ============================================================
+// SEND OTP
+// ============================================================
+
+router.post(
+    "/send-otp",
+    sendOTP
+);
+
+// ============================================================
 // UPDATE ONESIGNAL ID
+// ============================================================
+
 router.put(
     "/update-onesignal",
-    updateOneSignalId,
+    updateOneSignalId
 );
 
 module.exports = router;
