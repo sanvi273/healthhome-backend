@@ -1,27 +1,25 @@
 const mongoose = require("mongoose");
 
 // ============================================================
-// MEDICINE SUB-SCHEMA
+// MEDICINE ITEM SCHEMA
 // ============================================================
 
-const medicineSchema = new mongoose.Schema(
+const medicineItemSchema = new mongoose.Schema(
   {
     medicineId: {
       type: String,
-      required: true,
+      default: "",
     },
 
     medicineName: {
       type: String,
-      required: true,
-      trim: true,
+      default: "",
     },
 
     quantity: {
       type: Number,
       required: true,
       min: 1,
-      default: 1,
     },
 
     price: {
@@ -34,7 +32,6 @@ const medicineSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
-      default: 0,
     },
   },
   {
@@ -49,150 +46,82 @@ const medicineSchema = new mongoose.Schema(
 const orderSchema = new mongoose.Schema(
   {
     // ========================================================
-    // ORDER TYPE
-    //
-    // MEDICINE:
-    // Patient directly selects medicines.
-    //
-    // PRESCRIPTION:
-    // Patient uploads prescription and pharmacy
-    // confirms medicines later.
-    // ========================================================
-
-    orderType: {
-      type: String,
-      enum: ["MEDICINE", "PRESCRIPTION"],
-      default: "MEDICINE",
-      index: true,
-    },
-
-    // ========================================================
-    // PATIENT
+    // PATIENT DETAILS
     // ========================================================
 
     patientId: {
       type: String,
       default: "",
-      trim: true,
     },
 
     patientName: {
       type: String,
       required: true,
-      trim: true,
     },
 
     patientPhone: {
       type: String,
       required: true,
-      trim: true,
     },
 
     // ========================================================
-    // PHARMACY
+    // PHARMACY DETAILS
     // ========================================================
 
     pharmacyId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Pharmacy",
+      type: String,
       required: true,
     },
 
     pharmacyName: {
       type: String,
-      required: true,
-      trim: true,
+      default: "",
     },
 
     pharmacyPhone: {
       type: String,
       default: "",
-      trim: true,
     },
 
     // ========================================================
-    // DELIVERY ADDRESS
+    // ORDER DETAILS
     // ========================================================
+
+    orderType: {
+      type: String,
+      enum: [
+        "MEDICINE",
+        "PRESCRIPTION",
+      ],
+      default: "MEDICINE",
+    },
 
     address: {
       type: String,
       required: true,
-      trim: true,
     },
-
-    // ========================================================
-    // MEDICINES
-    //
-    // Normal MEDICINE order:
-    // At least one medicine is required.
-    //
-    // PRESCRIPTION order:
-    // Empty array is allowed initially because the
-    // pharmacy has not confirmed the prescription yet.
-    // ========================================================
-
-    medicines: {
-      type: [medicineSchema],
-      required: true,
-
-      validate: {
-        validator: function (value) {
-          // --------------------------------------------------
-          // PRESCRIPTION ORDER
-          // --------------------------------------------------
-          // Patient uploads prescription first.
-          // Medicines are added later by pharmacy.
-
-          if (
-            this.orderType ===
-            "PRESCRIPTION"
-          ) {
-            return Array.isArray(value);
-          }
-
-          // --------------------------------------------------
-          // NORMAL MEDICINE ORDER
-          // --------------------------------------------------
-          // Must contain at least one medicine.
-
-          return (
-            Array.isArray(value) &&
-            value.length > 0
-          );
-        },
-
-        message:
-          "At least one medicine is required for a medicine order.",
-      },
-    },
-
-    // ========================================================
-    // PRESCRIPTION IMAGE
-    // ========================================================
-
-    prescriptionImage: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    // ========================================================
-    // NOTES
-    // ========================================================
 
     notes: {
       type: String,
       default: "",
-      trim: true,
+    },
+
+    prescriptionImage: {
+      type: String,
+      default: "",
+    },
+
+    medicines: {
+      type: [medicineItemSchema],
+      default: [],
     },
 
     // ========================================================
-    // AMOUNTS
+    // AMOUNT DETAILS
     // ========================================================
 
     subtotal: {
       type: Number,
-      required: true,
       default: 0,
       min: 0,
     },
@@ -211,23 +140,17 @@ const orderSchema = new mongoose.Schema(
 
     totalAmount: {
       type: Number,
-      required: true,
       default: 0,
       min: 0,
     },
 
-    // ========================================================
-    // CURRENCY
-    // ========================================================
-
     currency: {
       type: String,
       default: "INR",
-      trim: true,
     },
 
     // ========================================================
-    // PAYMENT
+    // PAYMENT DETAILS
     // ========================================================
 
     paymentMethod: {
@@ -243,29 +166,25 @@ const orderSchema = new mongoose.Schema(
     paymentStatus: {
       type: String,
       default: "Pending",
-      trim: true,
     },
 
     razorpayOrderId: {
       type: String,
       default: "",
-      trim: true,
     },
 
     razorpayPaymentId: {
       type: String,
       default: "",
-      trim: true,
     },
 
     // ========================================================
-    // PHARMACY / PLATFORM SETTLEMENT
+    // SETTLEMENT DETAILS
     // ========================================================
 
     settlementStatus: {
       type: String,
       default: "Pending",
-      trim: true,
     },
 
     platformFee: {
@@ -298,32 +217,23 @@ const orderSchema = new mongoose.Schema(
       default: "Pending",
     },
 
-    // ========================================================
-    // ACCEPTED TIME
-    //
-    // Used by Pharmacy Dashboard to show newest
-    // accepted orders first.
-    // ========================================================
-
     acceptedAt: {
       type: Date,
       default: null,
     },
 
     // ========================================================
-    // DELIVERY AGENT
+    // DELIVERY AGENT DETAILS
     // ========================================================
 
     deliveryAgentName: {
       type: String,
       default: "",
-      trim: true,
     },
 
     deliveryAgentPhone: {
       type: String,
       default: "",
-      trim: true,
     },
 
     deliveryAgentAssigned: {
@@ -337,7 +247,55 @@ const orderSchema = new mongoose.Schema(
     },
 
     // ========================================================
-    // COD COLLECTION
+    // DELIVERY OTP SECURITY
+    // ========================================================
+    //
+    // IMPORTANT:
+    // We store ONLY the SHA-256 HASH of the OTP.
+    //
+    // OTP is generated when order becomes:
+    // "Out for Delivery"
+    //
+    // OTP validity:
+    // 10 minutes
+    //
+    // Maximum attempts:
+    // 5
+    //
+    // After successful verification:
+    // deliveryOtpVerified = true
+    // status = "Delivered"
+    //
+    // ========================================================
+
+    deliveryOtpHash: {
+      type: String,
+      default: "",
+    },
+
+    deliveryOtpExpiresAt: {
+      type: Date,
+      default: null,
+    },
+
+    deliveryOtpAttempts: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    deliveryOtpVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    deliveryOtpSentAt: {
+      type: Date,
+      default: null,
+    },
+
+    // ========================================================
+    // COD PAYMENT
     // ========================================================
 
     cashCollected: {
@@ -353,7 +311,6 @@ const orderSchema = new mongoose.Schema(
     cashCollectedBy: {
       type: String,
       default: "",
-      trim: true,
     },
 
     // ========================================================
@@ -368,9 +325,13 @@ const orderSchema = new mongoose.Schema(
     cancellationReason: {
       type: String,
       default: "",
-      trim: true,
     },
   },
+
+  // ==========================================================
+  // AUTOMATIC CREATED / UPDATED TIMESTAMPS
+  // ==========================================================
+
   {
     timestamps: true,
   }
@@ -380,27 +341,23 @@ const orderSchema = new mongoose.Schema(
 // INDEXES
 // ============================================================
 
-// Quickly find pharmacy orders.
 orderSchema.index({
   pharmacyId: 1,
   createdAt: -1,
 });
 
-// Quickly find patient orders.
 orderSchema.index({
   patientPhone: 1,
   createdAt: -1,
 });
 
-// Quickly filter order type.
 orderSchema.index({
   orderType: 1,
   status: 1,
 });
 
-// Quickly sort accepted orders.
 orderSchema.index({
-  acceptedAt: -1,
+  acceptedAt: 1,
 });
 
 // ============================================================
