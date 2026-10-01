@@ -267,7 +267,39 @@ const labOrderSchema = new mongoose.Schema(
       default: "Not Assigned",
     },
 
+    // ========================================================
+    // SAMPLE COLLECTION OTP
+    // ========================================================
 
+    collectionOtpHash: {
+      type: String,
+      default: "",
+    },
+
+    collectionOtpReqId: {
+  type: String,
+  default: "",
+},
+
+    collectionOtpExpiresAt: {
+      type: Date,
+      default: null,
+    },
+
+    collectionOtpAttempts: {
+      type: Number,
+      default: 0,
+    },
+
+    collectionOtpVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    collectionOtpSentAt: {
+      type: Date,
+      default: null,
+    },
     // ========================================================
     // LAB PROCESS
     // ========================================================
