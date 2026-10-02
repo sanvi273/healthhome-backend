@@ -505,47 +505,73 @@ const assignSampleCollector = async (
 // COLLECTOR ON THE WAY
 // ============================================================
 
-const collectorOnTheWay = async (
-  req,
-  res
-) => {
+const collectorOnTheWay = async (req, res) => {
   try {
-    const order =
-      await LabOrder.findById(
-        req.params.id
-      );
+    const { id } = req.params;
+
+    const order = await LabOrder.findById(id);
 
     if (!order) {
       return res.status(404).json({
         success: false,
-        message:
-          "Lab order not found",
+        message: "Lab order not found",
       });
     }
 
-    if (
-      order.status !==
-      "Collector Assigned"
-    ) {
+    if (order.status !== "Collector Assigned") {
       return res.status(400).json({
         success: false,
-        message:
-          "Collector must be assigned first",
+        message: "Collector must be assigned first",
       });
     }
 
-    order.status =
-      "On The Way";
+    // ------------------------------------------------------
+    // CHANGE STATUS
+    // ------------------------------------------------------
 
-    order.collectorStatus =
-      "On The Way";
+    order.status = "On The Way";
+    order.collectorStatus = "On The Way";
+
+    // ------------------------------------------------------
+    // GENERATE OTP FOR HOME COLLECTION
+    // ------------------------------------------------------
+
+    if (order.collectionMode === "Home Collection") {
+      const otp = generateLabOtp();
+
+      const otpHash = hashLabOtp(otp);
+
+      const expiresAt = new Date(
+        Date.now() + 10 * 60 * 1000
+      );
+
+      // Save plaintext OTP temporarily for DEMO/PATIENT display
+      saveCollectionOtpForDemo(
+        id,
+        otp,
+        expiresAt
+      );
+
+      // Save secure OTP information in MongoDB
+      order.collectionOtpHash = otpHash;
+      order.collectionOtpExpiresAt = expiresAt;
+      order.collectionOtpAttempts = 0;
+      order.collectionOtpVerified = false;
+      order.collectionOtpSentAt = new Date();
+
+      console.log("==========================================");
+      console.log("NEW LAB COLLECTION OTP GENERATED");
+      console.log("ORDER ID:", id);
+      console.log("OTP:", otp);
+      console.log("EXPIRES AT:", expiresAt.toISOString());
+      console.log("==========================================");
+    }
 
     await order.save();
 
     return res.status(200).json({
       success: true,
-      message:
-        "Collector is on the way",
+      message: "Collector is on the way",
       order,
     });
   } catch (error) {
@@ -1300,23 +1326,7 @@ saveCollectionOtpForDemo(
     labOrder.collectionOtpSentAt =
       new Date();
 // ------------------------------------------------------
-// CLEAR OTP DATA
-// ------------------------------------------------------
 
-labOrder.collectionOtpHash =
-  "";
-
-labOrder.collectionOtpExpiresAt =
-  null;
-
-labOrder.collectionOtpAttempts =
-  0;
-
-labOrder.collectionOtpSentAt =
-  null;
-
-// Remove plaintext OTP from temporary memory
-deleteCollectionOtpFromDemoStore(id);
 
 
     await labOrder.save();
