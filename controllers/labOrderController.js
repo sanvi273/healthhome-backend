@@ -529,8 +529,147 @@ const collectorOnTheWay = async (req, res) => {
     // CHANGE STATUS
     // ------------------------------------------------------
 
-    order.status = "On The Way";
-    order.collectorStatus = "On The Way";
+    // ============================================================
+// COLLECTOR ON THE WAY
+// ============================================================
+
+const collectorOnTheWay = async (
+  req,
+  res
+) => {
+  try {
+    const { id } = req.params;
+
+    const order =
+      await LabOrder.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Lab order not found",
+      });
+    }
+
+    if (
+      order.status !==
+      "Collector Assigned"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Collector must be assigned first",
+      });
+    }
+
+    // --------------------------------------------------------
+    // CHANGE STATUS
+    // --------------------------------------------------------
+
+    order.status =
+      "On The Way";
+
+    order.collectorStatus =
+      "On The Way";
+
+    // --------------------------------------------------------
+    // GENERATE OTP FOR HOME COLLECTION
+    // --------------------------------------------------------
+
+    if (
+      order.collectionMode ===
+      "Home Collection"
+    ) {
+      const otp =
+        generateLabOtp();
+
+      const otpHash =
+        hashLabOtp(otp);
+
+      const expiresAt =
+        new Date(
+          Date.now() +
+            10 * 60 * 1000
+        );
+
+      // Store plaintext temporarily
+      // for Patient app demo/testing
+      saveCollectionOtpForDemo(
+        id,
+        otp,
+        expiresAt
+      );
+
+      // Store only hash + metadata in MongoDB
+      order.collectionOtpHash =
+        otpHash;
+
+      order.collectionOtpExpiresAt =
+        expiresAt;
+
+      order.collectionOtpAttempts =
+        0;
+
+      order.collectionOtpVerified =
+        false;
+
+      order.collectionOtpSentAt =
+        new Date();
+
+      console.log(
+        "=========================================="
+      );
+
+      console.log(
+        "NEW LAB COLLECTION OTP GENERATED"
+      );
+
+      console.log(
+        "ORDER ID:",
+        id
+      );
+
+      console.log(
+        "OTP:",
+        otp
+      );
+
+      console.log(
+        "EXPIRES AT:",
+        expiresAt.toISOString()
+      );
+
+      console.log(
+        "=========================================="
+      );
+    }
+
+    // --------------------------------------------------------
+    // SAVE ORDER
+    // --------------------------------------------------------
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Collector is on the way",
+      order,
+    });
+
+  } catch (error) {
+    console.error(
+      "COLLECTOR ON WAY ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error.message,
+    });
+  }
+};
 
     // ------------------------------------------------------
     // GENERATE OTP FOR HOME COLLECTION
@@ -1124,6 +1263,59 @@ const hashLabOtp = (otp) => {
     .digest("hex");
 };
 
+// ==========================================================
+// DEMO OTP STORE
+// Keeps plaintext OTP temporarily in server memory
+// so Patient app can display the same OTP.
+// OTP expires automatically after 10 minutes.
+// ==========================================================
+
+const collectionOtpStore = new Map();
+
+const saveCollectionOtpForDemo = (
+  orderId,
+  otp,
+  expiresAt
+) => {
+  collectionOtpStore.set(String(orderId), {
+    otp: String(otp),
+    expiresAt: new Date(expiresAt).getTime(),
+  });
+};
+
+const getCollectionOtpFromDemoStore = (
+  orderId
+) => {
+  const entry =
+    collectionOtpStore.get(
+      String(orderId)
+    );
+
+  if (!entry) {
+    return null;
+  }
+
+  if (
+    Date.now() >
+    entry.expiresAt
+  ) {
+    collectionOtpStore.delete(
+      String(orderId)
+    );
+
+    return null;
+  }
+
+  return entry.otp;
+};
+
+const deleteCollectionOtpFromDemoStore = (
+  orderId
+) => {
+  collectionOtpStore.delete(
+    String(orderId)
+  );
+};
 // ==========================================================
 // GENERATE LAB COLLECTION OTP
 // ==========================================================
