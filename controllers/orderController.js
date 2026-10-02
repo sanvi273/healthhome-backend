@@ -45,6 +45,62 @@ const hashDeliveryOtp = (otp) => {
 };
 
 // ============================================================
+// DEMO ONLY: TEMPORARY DELIVERY OTP STORE
+// ============================================================
+//
+// MongoDB stores only the HASH of the OTP.
+// For this demo, we temporarily keep the real OTP
+// in server memory so the Patient app can display it.
+//
+// NOTE:
+// This is ONLY for testing/demo.
+// Server restart will clear this memory.
+// ============================================================
+
+const deliveryOtpStore = new Map();
+
+const saveDeliveryOtpForDemo = (
+  orderId,
+  otp,
+  expiresAt
+) => {
+  deliveryOtpStore.set(
+    String(orderId),
+    {
+      otp: String(otp),
+      expiresAt: new Date(expiresAt).getTime(),
+    }
+  );
+};
+
+const getDeliveryOtpFromDemoStore = (
+  orderId
+) => {
+  const entry =
+    deliveryOtpStore.get(
+      String(orderId)
+    );
+
+  if (!entry) {
+    return null;
+  }
+
+  // OTP expired
+  if (
+    Date.now() >
+    entry.expiresAt
+  ) {
+    deliveryOtpStore.delete(
+      String(orderId)
+    );
+
+    return null;
+  }
+
+  return entry.otp;
+};
+
+// ============================================================
 // HELPER: REPAIR / RECALCULATE ORDER AMOUNTS
 // ============================================================
 
@@ -1655,6 +1711,138 @@ const getPatientOrders =
     }
   };
 
+
+  // ============================================================
+// GET DELIVERY OTP - PATIENT
+// ============================================================
+//
+// Patient side calls this endpoint when the order is
+// Out for Delivery.
+//
+// Demo/testing only.
+// ============================================================
+
+const getDeliveryOtp = async (
+  req,
+  res
+) => {
+  try {
+    const orderId =
+      req.params.id;
+
+    // --------------------------------------------------------
+    // FIND ORDER
+    // --------------------------------------------------------
+
+    const order =
+      await Order.findById(
+        orderId
+      );
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Order not found.",
+      });
+    }
+
+    // --------------------------------------------------------
+    // STATUS CHECK
+    // --------------------------------------------------------
+
+    if (
+      order.status !==
+      "Out for Delivery"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Delivery OTP is available only when the order is Out for Delivery.",
+      });
+    }
+
+    // --------------------------------------------------------
+    // ALREADY VERIFIED
+    // --------------------------------------------------------
+
+    if (
+      order.deliveryOtpVerified
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Delivery OTP has already been verified.",
+      });
+    }
+
+    // --------------------------------------------------------
+    // EXPIRY CHECK
+    // --------------------------------------------------------
+
+    if (
+      !order.deliveryOtpExpiresAt ||
+      new Date() >
+        new Date(
+          order.deliveryOtpExpiresAt
+        )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Delivery OTP has expired.",
+        expired: true,
+      });
+    }
+
+    // --------------------------------------------------------
+    // GET OTP FROM TEMPORARY MEMORY
+    // --------------------------------------------------------
+
+    const deliveryOtp =
+      getDeliveryOtpFromDemoStore(
+        orderId
+      );
+
+    if (!deliveryOtp) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Delivery OTP is no longer available in demo server memory. The server may have restarted.",
+        testingOnly: true,
+      });
+    }
+
+    // --------------------------------------------------------
+    // SUCCESS
+    // --------------------------------------------------------
+
+    return res.status(200).json({
+      success: true,
+
+      deliveryOtp,
+
+      deliveryOtpExpiresAt:
+        order.deliveryOtpExpiresAt,
+
+      testingOnly: true,
+    });
+
+  } catch (error) {
+    console.error(
+      "GET DELIVERY OTP ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        "Unable to get delivery OTP.",
+    });
+  }
+};
+
   // ============================================================
 // UPDATE ORDER STATUS
 // ============================================================
@@ -1864,6 +2052,13 @@ const updateOrderStatus =
             Date.now() +
               10 * 60 * 1000
           );
+
+          // Save plaintext OTP temporarily for Patient demo
+saveDeliveryOtpForDemo(
+  order._id,
+  generatedDeliveryOtp,
+  order.deliveryOtpExpiresAt
+);
 
         order.deliveryOtpAttempts =
           0;
@@ -2665,24 +2860,15 @@ const getAllOrders =
 
 module.exports = {
   placeOrder,
-
   placePrescriptionOrder,
-
   confirmPrescriptionOrder,
-
   getPharmacyOrders,
-
   getPatientOrders,
-
   updateOrderStatus,
-
   assignDeliveryAgent,
-
   removeDeliveryAgent,
-
   verifyDeliveryOtp,
-
+  getDeliveryOtp,
   collectCODPayment,
-
   getAllOrders,
 };

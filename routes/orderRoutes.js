@@ -21,7 +21,7 @@ const {
   removeDeliveryAgent,
 
   verifyDeliveryOtp,
-
+  getDeliveryOtp,
   collectCODPayment,
 
   getAllOrders,
@@ -134,6 +134,21 @@ router.put(
 
 );
 
+
+// ============================================================
+// GET DELIVERY OTP - PATIENT
+// ============================================================
+//
+// Patient side uses this endpoint to display the same OTP
+// that was generated when the order became Out for Delivery.
+//
+// Demo/testing only.
+// ============================================================
+
+router.get(
+  "/delivery-otp/:id",
+  getDeliveryOtp
+);
 // ============================================================
 // VERIFY DELIVERY OTP
 // ============================================================
