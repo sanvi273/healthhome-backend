@@ -21,7 +21,7 @@ const {
   // ============================================================
   generateCollectionOtp,
   verifyCollectionOtp,
-
+  getCollectionOtp,
 } = require("../controllers/labOrderController");
 
 
@@ -53,7 +53,21 @@ router.get(
   getLabOrders
 );
 
+// ============================================================
+// PATIENT GETS COLLECTION OTP
+// ============================================================
+//
+// Used by Patient app to display the same OTP generated
+// for the Home Collection order.
+//
+// IMPORTANT:
+// This must be BEFORE /:id
+// ============================================================
 
+router.get(
+  "/collection-otp/:id",
+  getCollectionOtp
+);
 // ============================================================
 // GET SINGLE LAB ORDER
 // ============================================================

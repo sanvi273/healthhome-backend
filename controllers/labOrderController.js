@@ -1275,7 +1275,12 @@ const generateCollectionOtp = async (
         Date.now() +
           10 * 60 * 1000
       );
-
+// Save plaintext OTP temporarily for Patient app
+saveCollectionOtpForDemo(
+  id,
+  otp,
+  expiresAt
+);
     // ------------------------------------------------------
     // SAVE OTP SESSION
     // ------------------------------------------------------
@@ -1294,6 +1299,25 @@ const generateCollectionOtp = async (
 
     labOrder.collectionOtpSentAt =
       new Date();
+// ------------------------------------------------------
+// CLEAR OTP DATA
+// ------------------------------------------------------
+
+labOrder.collectionOtpHash =
+  "";
+
+labOrder.collectionOtpExpiresAt =
+  null;
+
+labOrder.collectionOtpAttempts =
+  0;
+
+labOrder.collectionOtpSentAt =
+  null;
+
+// Remove plaintext OTP from temporary memory
+deleteCollectionOtpFromDemoStore(id);
+
 
     await labOrder.save();
 
@@ -1600,6 +1624,8 @@ module.exports = {
   startTesting,
   updateLabOrderStatus,
   uploadReport,
+
   generateCollectionOtp,
+  getCollectionOtp,
   verifyCollectionOtp,
 };
