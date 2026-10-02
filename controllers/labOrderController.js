@@ -1359,6 +1359,116 @@ deleteCollectionOtpFromDemoStore(id);
 };
 
 // ==========================================================
+// GET LAB COLLECTION OTP
+// ==========================================================
+// Patient app uses this endpoint to display the same OTP
+// generated for the collector.
+//
+// DEMO/TESTING:
+// Plain OTP is temporarily kept in server memory.
+// It is NOT stored in MongoDB.
+// ==========================================================
+
+const getCollectionOtp = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const labOrder = await LabOrder.findById(id);
+
+    if (!labOrder) {
+      return res.status(404).json({
+        success: false,
+        message: "Lab order not found",
+      });
+    }
+
+    // OTP only applies to Home Collection
+    if (labOrder.collectionMode !== "Home Collection") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Collection OTP is available only for Home Collection",
+      });
+    }
+
+    // OTP only available when collector is on the way
+    if (labOrder.status !== "On The Way") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Collection OTP is available only when collector is On The Way",
+      });
+    }
+
+    // Already verified
+    if (labOrder.collectionOtpVerified === true) {
+      return res.status(400).json({
+        success: false,
+        message: "Collection OTP has already been verified",
+      });
+    }
+
+    // No active OTP
+    if (
+      !labOrder.collectionOtpHash ||
+      !labOrder.collectionOtpExpiresAt
+    ) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "No active collection OTP found. Please generate the OTP first.",
+      });
+    }
+
+    // Check expiry
+    if (
+      new Date() >
+      new Date(labOrder.collectionOtpExpiresAt)
+    ) {
+      deleteCollectionOtpFromDemoStore(id);
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "Collection OTP has expired. Please generate a new OTP.",
+        expired: true,
+      });
+    }
+
+    // Get the SAME plaintext OTP that was generated
+    const collectionOtp =
+      getCollectionOtpFromDemoStore(id);
+
+    if (!collectionOtp) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Collection OTP is no longer available in server memory. Please generate a new OTP.",
+        testingOnly: true,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      collectionOtp,
+      collectionOtpExpiresAt:
+        labOrder.collectionOtpExpiresAt,
+      testingOnly: true,
+    });
+  } catch (error) {
+    console.error(
+      "GET COLLECTION OTP ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get collection OTP",
+      error: error.message,
+    });
+  }
+};
+// ==========================================================
 // VERIFY LAB COLLECTION OTP
 // ==========================================================
 
