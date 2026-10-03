@@ -525,96 +525,40 @@ const collectorOnTheWay = async (req, res) => {
       });
     }
 
-    // ------------------------------------------------------
-    // CHANGE STATUS
-    // ------------------------------------------------------
+    // ========================================================
+    // CHANGE ORDER STATUS
+    // ========================================================
 
-    // ============================================================
-// COLLECTOR ON THE WAY
-// ============================================================
+    order.status = "On The Way";
+    order.collectorStatus = "On The Way";
 
-const collectorOnTheWay = async (
-  req,
-  res
-) => {
-  try {
-    const { id } = req.params;
-
-    const order =
-      await LabOrder.findById(id);
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message:
-          "Lab order not found",
-      });
-    }
-
-    if (
-      order.status !==
-      "Collector Assigned"
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Collector must be assigned first",
-      });
-    }
-
-    // --------------------------------------------------------
-    // CHANGE STATUS
-    // --------------------------------------------------------
-
-    order.status =
-      "On The Way";
-
-    order.collectorStatus =
-      "On The Way";
-
-    // --------------------------------------------------------
+    // ========================================================
     // GENERATE OTP FOR HOME COLLECTION
-    // --------------------------------------------------------
+    // ========================================================
 
-    if (
-      order.collectionMode ===
-      "Home Collection"
-    ) {
-      const otp =
-        generateLabOtp();
+    if (order.collectionMode === "Home Collection") {
+      const otp = generateLabOtp();
 
-      const otpHash =
-        hashLabOtp(otp);
+      const otpHash = hashLabOtp(otp);
 
-      const expiresAt =
-        new Date(
-          Date.now() +
-            10 * 60 * 1000
-        );
+      const expiresAt = new Date(
+        Date.now() + 10 * 60 * 1000
+      );
 
-      // Store plaintext temporarily
-      // for Patient app demo/testing
+      // Save plaintext OTP temporarily
+      // so Patient can see the same OTP
       saveCollectionOtpForDemo(
         id,
         otp,
         expiresAt
       );
 
-      // Store only hash + metadata in MongoDB
-      order.collectionOtpHash =
-        otpHash;
-
-      order.collectionOtpExpiresAt =
-        expiresAt;
-
-      order.collectionOtpAttempts =
-        0;
-
-      order.collectionOtpVerified =
-        false;
-
-      order.collectionOtpSentAt =
-        new Date();
+      // Save secure OTP data in MongoDB
+      order.collectionOtpHash = otpHash;
+      order.collectionOtpExpiresAt = expiresAt;
+      order.collectionOtpAttempts = 0;
+      order.collectionOtpVerified = false;
+      order.collectionOtpSentAt = new Date();
 
       console.log(
         "=========================================="
@@ -644,75 +588,45 @@ const collectorOnTheWay = async (
       );
     }
 
-    // --------------------------------------------------------
-    // SAVE ORDER
-    // --------------------------------------------------------
+    // ========================================================
+    // SAVE EVERYTHING
+    // ========================================================
 
     await order.save();
 
-    return res.status(200).json({
-      success: true,
-      message:
-        "Collector is on the way",
-      order,
-    });
-
-  } catch (error) {
-    console.error(
-      "COLLECTOR ON WAY ERROR:",
-      error
+    console.log(
+      "=========================================="
     );
 
-    return res.status(500).json({
-      success: false,
-      message:
-        error.message,
-    });
-  }
-};
+    console.log(
+      "COLLECTOR ON THE WAY SUCCESS"
+    );
 
-    // ------------------------------------------------------
-    // GENERATE OTP FOR HOME COLLECTION
-    // ------------------------------------------------------
+    console.log(
+      "ORDER ID:",
+      id
+    );
 
-    if (order.collectionMode === "Home Collection") {
-      const otp = generateLabOtp();
+    console.log(
+      "STATUS:",
+      order.status
+    );
 
-      const otpHash = hashLabOtp(otp);
+    console.log(
+      "COLLECTOR STATUS:",
+      order.collectorStatus
+    );
 
-      const expiresAt = new Date(
-        Date.now() + 10 * 60 * 1000
-      );
-
-      // Save plaintext OTP temporarily for DEMO/PATIENT display
-      saveCollectionOtpForDemo(
-        id,
-        otp,
-        expiresAt
-      );
-
-      // Save secure OTP information in MongoDB
-      order.collectionOtpHash = otpHash;
-      order.collectionOtpExpiresAt = expiresAt;
-      order.collectionOtpAttempts = 0;
-      order.collectionOtpVerified = false;
-      order.collectionOtpSentAt = new Date();
-
-      console.log("==========================================");
-      console.log("NEW LAB COLLECTION OTP GENERATED");
-      console.log("ORDER ID:", id);
-      console.log("OTP:", otp);
-      console.log("EXPIRES AT:", expiresAt.toISOString());
-      console.log("==========================================");
-    }
-
-    await order.save();
+    console.log(
+      "=========================================="
+    );
 
     return res.status(200).json({
       success: true,
       message: "Collector is on the way",
       order,
     });
+
   } catch (error) {
     console.error(
       "COLLECTOR ON WAY ERROR:",
@@ -725,6 +639,7 @@ const collectorOnTheWay = async (
     });
   }
 };
+
 
 // ============================================================
 // SAMPLE COLLECTED
