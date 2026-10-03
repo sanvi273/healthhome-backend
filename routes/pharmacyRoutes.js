@@ -6,17 +6,30 @@ const {
   addPharmacy,
   getPharmacies,
   getPharmacyProfile,
+
+  // Delivery Partners
+  getDeliveryPartners,
+  addDeliveryPartner,
+  deleteDeliveryPartner,
+
 } = require("../controllers/pharmacyController");
 
 
-// ================= TEST =================
+// ============================================================
+// TEST
+// ============================================================
 
-router.get("/test", (req, res) => {
-  res.send("Pharmacy route working");
-});
+router.get(
+  "/test",
+  (req, res) => {
+    res.send("Pharmacy route working");
+  }
+);
 
 
-// ================= ADD PHARMACY =================
+// ============================================================
+// ADD PHARMACY
+// ============================================================
 
 router.post(
   "/add",
@@ -24,7 +37,9 @@ router.post(
 );
 
 
-// ================= GET ALL PHARMACIES =================
+// ============================================================
+// GET ALL PHARMACIES
+// ============================================================
 
 router.get(
   "/all",
@@ -32,11 +47,69 @@ router.get(
 );
 
 
-// ================= GET PHARMACY PROFILE BY PHONE =================
+// ============================================================
+// GET PHARMACY PROFILE BY PHONE
+// ============================================================
 
 router.get(
   "/profile/:phone",
   getPharmacyProfile
+);
+
+
+// ============================================================
+// DELIVERY PARTNERS
+// ============================================================
+
+
+// ------------------------------------------------------------
+// GET DELIVERY PARTNERS
+// ------------------------------------------------------------
+//
+// GET
+// /api/pharmacies/:phone/delivery-partners
+//
+// Example:
+// /api/pharmacies/9876543210/delivery-partners
+//
+
+router.get(
+  "/:phone/delivery-partners",
+  getDeliveryPartners
+);
+
+
+// ------------------------------------------------------------
+// ADD DELIVERY PARTNER
+// ------------------------------------------------------------
+//
+// POST
+// /api/pharmacies/:phone/delivery-partners
+//
+// Body:
+// {
+//   "name": "Rahul",
+//   "phone": "9876543211"
+// }
+//
+
+router.post(
+  "/:phone/delivery-partners",
+  addDeliveryPartner
+);
+
+
+// ------------------------------------------------------------
+// DELETE DELIVERY PARTNER
+// ------------------------------------------------------------
+//
+// DELETE
+// /api/pharmacies/:phone/delivery-partners/:partnerId
+//
+
+router.delete(
+  "/:phone/delivery-partners/:partnerId",
+  deleteDeliveryPartner
 );
 
 

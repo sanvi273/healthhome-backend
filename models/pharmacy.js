@@ -33,6 +33,37 @@ const pharmacySchema = new mongoose.Schema(
     },
 
     // ============================================================
+    // DELIVERY PARTNERS
+    // ============================================================
+
+    // Permanent delivery partners belonging to this pharmacy.
+    // These are stored in MongoDB and will NOT disappear
+    // when the pharmacy logs out.
+    //
+    // They will remain until the pharmacy explicitly deletes them.
+
+    deliveryPartners: [
+      {
+        name: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+
+        phone: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
+    // ============================================================
     // PHARMACY PROFILE
     // ============================================================
 
@@ -55,22 +86,11 @@ const pharmacySchema = new mongoose.Schema(
     // RAZORPAY MARKETPLACE / SETTLEMENT
     // ============================================================
 
-    // Razorpay Linked Account ID
-    //
-    // Example:
-    // acc_xxxxxxxxxxxxx
-    //
-    // This will be added only after the pharmacy is onboarded
-    // with the appropriate Razorpay marketplace/Route setup.
-
     razorpayLinkedAccountId: {
       type: String,
       default: "",
       index: true,
     },
-
-    // Whether this pharmacy has completed the required
-    // Razorpay onboarding for receiving settlements.
 
     razorpayOnboarded: {
       type: Boolean,
@@ -89,13 +109,6 @@ const pharmacySchema = new mongoose.Schema(
     // ============================================================
     // BUSINESS / COMMISSION
     // ============================================================
-
-    // HealthHome commission percentage.
-    //
-    // Example:
-    // 10 means 10%
-    //
-    // Keep 0 until you decide the actual business commission.
 
     platformFeePercentage: {
       type: Number,
