@@ -9,32 +9,28 @@ const router =
 
 const {
   bookAppointment,
-
   getAvailableSlots,
-
   getAppointments,
-
   getDoctorAppointments,
-
   getPatientAppointments,
-
   getAppointmentById,
-
   updateAppointmentStatus,
-
   updatePaymentStatus,
-
   deleteAppointment,
-
   startConsultation,
-
   joinConsultation,
-
   checkReadyConsultation,
-
   completeConsultation,
-} = require(
-  "../controllers/appointmentController"
+  generateAgoraToken,
+} = require("../controllers/appointmentController");
+
+// ============================================================
+// AGORA VIDEO TOKEN
+// ============================================================
+
+router.post(
+  "/agora-token",
+  generateAgoraToken
 );
 
 // ============================================================

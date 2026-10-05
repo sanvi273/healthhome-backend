@@ -1,6 +1,11 @@
 const Appointment =
   require("../models/Appointment");
 
+  const {
+  RtcTokenBuilder,
+  RtcRole,
+} = require("agora-token");
+
 const uploadToCloudinary =
   require("../utils/cloudinaryUpload");
 
@@ -1280,3 +1285,197 @@ exports.completeConsultation =
       });
     }
   };
+
+  // ============================================================
+// GENERATE AGORA VIDEO CONSULTATION TOKEN
+// ============================================================
+
+exports.generateAgoraToken = async (req, res) => {
+  try {
+    const {
+      appointmentId,
+      uid,
+    } = req.body;
+
+    console.log("=================================");
+    console.log("GENERATE AGORA TOKEN");
+    console.log("APPOINTMENT ID =", appointmentId);
+    console.log("UID =", uid);
+    console.log("=================================");
+
+    // --------------------------------------------------------
+    // VALIDATION
+    // --------------------------------------------------------
+
+    if (!appointmentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Appointment ID is required",
+      });
+    }
+
+    if (uid === undefined || uid === null) {
+      return res.status(400).json({
+        success: false,
+        message: "UID is required",
+      });
+    }
+
+    const numericUid = Number(uid);
+
+    if (!Number.isInteger(numericUid) || numericUid < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "UID must be a valid number",
+      });
+    }
+
+    // --------------------------------------------------------
+    // FIND APPOINTMENT
+    // --------------------------------------------------------
+
+    const appointment =
+      await Appointment.findById(appointmentId);
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    // --------------------------------------------------------
+    // ONLY VIDEO CONSULTATIONS
+    // --------------------------------------------------------
+
+    if (
+      appointment.consultationType !==
+      "Video Consultation"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This appointment is not a video consultation",
+      });
+    }
+
+    // --------------------------------------------------------
+    // CONSULTATION MUST BE READY
+    // --------------------------------------------------------
+
+    if (
+      appointment.consultationStatus !== "Ready" &&
+      appointment.consultationStatus !== "Joined"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Video consultation has not been started yet",
+      });
+    }
+
+    // --------------------------------------------------------
+    // CHECK AGORA CREDENTIALS
+    // --------------------------------------------------------
+
+    const appId =
+      process.env.AGORA_APP_ID;
+
+    const appCertificate =
+      process.env.AGORA_APP_CERTIFICATE;
+
+    if (!appId || !appCertificate) {
+      console.error(
+        "AGORA_APP_ID or AGORA_APP_CERTIFICATE missing"
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Agora server configuration is missing",
+      });
+    }
+
+    // --------------------------------------------------------
+    // CHANNEL NAME
+    // --------------------------------------------------------
+
+    const channelName =
+      appointment.meetingId ||
+      `healthhome-${appointment._id}`;
+
+    // --------------------------------------------------------
+    // TOKEN EXPIRATION
+    // 1 hour
+    // --------------------------------------------------------
+
+    const tokenExpirationInSeconds = 60 * 60;
+
+    const currentTimestamp =
+      Math.floor(Date.now() / 1000);
+
+    const privilegeExpiredTs =
+      currentTimestamp +
+      tokenExpirationInSeconds;
+
+    // --------------------------------------------------------
+    // GENERATE RTC TOKEN
+    // --------------------------------------------------------
+
+    const token =
+      RtcTokenBuilder.buildTokenWithUid(
+        appId,
+        appCertificate,
+        channelName,
+        numericUid,
+        RtcRole.PUBLISHER,
+        privilegeExpiredTs,
+        privilegeExpiredTs
+      );
+
+    console.log(
+      "Agora token generated successfully"
+    );
+
+    console.log(
+      "CHANNEL =",
+      channelName
+    );
+
+    console.log(
+      "UID =",
+      numericUid
+    );
+
+    console.log(
+      "================================="
+    );
+
+    // --------------------------------------------------------
+    // RESPONSE
+    // --------------------------------------------------------
+
+    return res.status(200).json({
+      success: true,
+      appId: appId,
+      channelName: channelName,
+      uid: numericUid,
+      token: token,
+      expiresAt: privilegeExpiredTs,
+    });
+
+  } catch (error) {
+
+    console.error(
+      "GENERATE AGORA TOKEN ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Failed to generate Agora token",
+      error: error.message,
+    });
+  }
+};
