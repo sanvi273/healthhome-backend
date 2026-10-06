@@ -5,7 +5,8 @@ const router = express.Router();
 const paymentController = require("../controllers/paymentController");
 
 // ============================================================
-// CREATE UPI QR PAYMENT
+// CREATE RAZORPAY ORDER
+// Used for UPI, Cards, Net Banking, Wallets, etc.
 // ============================================================
 
 router.post(
@@ -14,35 +15,12 @@ router.post(
 );
 
 // ============================================================
-// VERIFY UPI QR PAYMENT
+// VERIFY RAZORPAY PAYMENT
 // ============================================================
 
 router.post(
   "/verify-payment",
   paymentController.verifyPayment
-);
-
-// ============================================================
-// GET QR PAYMENT STATUS
-//
-// Used by Flutter to check whether the patient has completed
-// the UPI payment.
-// ============================================================
-
-router.get(
-  "/qr-status/:paymentRecordId",
-  paymentController.getQrPaymentStatus
-);
-
-// ============================================================
-// CLOSE QR
-//
-// Used when the user cancels/leaves the payment screen.
-// ============================================================
-
-router.post(
-  "/close-qr",
-  paymentController.closeQr
 );
 
 // ============================================================
@@ -52,6 +30,22 @@ router.post(
 router.post(
   "/webhook",
   paymentController.webhook
+);
+
+// ============================================================
+// OLD QR ENDPOINTS
+// Kept temporarily so older Flutter builds do not crash.
+// New payment flow does NOT use these.
+// ============================================================
+
+router.get(
+  "/qr-status/:paymentRecordId",
+  paymentController.getQrPaymentStatus
+);
+
+router.post(
+  "/close-qr",
+  paymentController.closeQr
 );
 
 module.exports = router;
