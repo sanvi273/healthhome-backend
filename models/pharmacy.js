@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
 
+// ============================================================
+// PHARMACY SCHEMA
+// ============================================================
+
 const pharmacySchema = new mongoose.Schema(
   {
     // ============================================================
@@ -9,38 +13,58 @@ const pharmacySchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
     },
 
     shopType: {
       type: String,
       required: true,
+      trim: true,
     },
 
     experience: {
       type: String,
       required: true,
+      trim: true,
     },
 
     address: {
       type: String,
       required: true,
+      trim: true,
     },
 
     phone: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
 
     // ============================================================
     // DELIVERY PARTNERS
     // ============================================================
-
-    // Permanent delivery partners belonging to this pharmacy.
-    // These are stored in MongoDB and will NOT disappear
-    // when the pharmacy logs out.
     //
-    // They will remain until the pharmacy explicitly deletes them.
+    // Each pharmacy can have multiple permanent
+    // delivery partners.
+    //
+    // MongoDB/Mongoose automatically creates an _id
+    // for every delivery partner.
+    //
+    // Example:
+    //
+    // deliveryPartners: [
+    //   {
+    //     _id: "68xxxxxxxxxxxx",
+    //     name: "Rahul",
+    //     phone: "9876543210",
+    //     createdAt: "2026-10-06T..."
+    //   }
+    // ]
+    //
+    // The _id is used when deleting a specific partner.
+    //
+    // ============================================================
 
     deliveryPartners: [
       {
@@ -83,7 +107,7 @@ const pharmacySchema = new mongoose.Schema(
     },
 
     // ============================================================
-    // RAZORPAY MARKETPLACE / SETTLEMENT
+    // RAZORPAY MARKETPLACE / LINKED ACCOUNT
     // ============================================================
 
     razorpayLinkedAccountId: {
@@ -98,7 +122,7 @@ const pharmacySchema = new mongoose.Schema(
     },
 
     // ============================================================
-    // SETTLEMENT DETAILS
+    // SETTLEMENT
     // ============================================================
 
     settlementEnabled: {
@@ -107,7 +131,7 @@ const pharmacySchema = new mongoose.Schema(
     },
 
     // ============================================================
-    // BUSINESS / COMMISSION
+    // PLATFORM FEE / COMMISSION
     // ============================================================
 
     platformFeePercentage: {
@@ -117,12 +141,34 @@ const pharmacySchema = new mongoose.Schema(
       default: 0,
     },
   },
+
+  // ============================================================
+  // AUTOMATIC CREATEDAT / UPDATEDAT
+  // ============================================================
+
   {
     timestamps: true,
   }
 );
 
-module.exports = mongoose.model(
-  "Pharmacy",
-  pharmacySchema
-);
+// ============================================================
+// EXPORT PHARMACY MODEL
+// ============================================================
+//
+// IMPORTANT:
+//
+// Using mongoose.models.Pharmacy first prevents:
+//
+// OverwriteModelError:
+// Cannot overwrite `Pharmacy` model once compiled.
+//
+// If the Pharmacy model already exists, MongoDB/Mongoose
+// reuses it.
+//
+// If it doesn't exist, it creates the model.
+//
+// ============================================================
+
+module.exports =
+  mongoose.models.Pharmacy ||
+  mongoose.model("Pharmacy", pharmacySchema);
