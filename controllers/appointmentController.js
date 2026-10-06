@@ -1274,8 +1274,7 @@ exports.checkReadyConsultation =
           patientPhone:
             req.params.patientPhone,
 
-          consultationStatus:
-            "Ready",
+          consultationStatus: { $in: ["Ready", "Joined"] },
 
           consultationType:
             "Video Consultation",
