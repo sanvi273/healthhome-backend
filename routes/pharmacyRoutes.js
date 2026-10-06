@@ -2,115 +2,131 @@ const express = require("express");
 
 const router = express.Router();
 
-const {
-  addPharmacy,
-  getPharmacies,
-  getPharmacyProfile,
-
-  // Delivery Partners
-  getDeliveryPartners,
-  addDeliveryPartner,
-  deleteDeliveryPartner,
-
-} = require("../controllers/pharmacyController");
-
-
 // ============================================================
-// TEST
+// PHARMACY CONTROLLER
 // ============================================================
 
-router.get(
-  "/test",
-  (req, res) => {
-    res.send("Pharmacy route working");
-  }
+const pharmacyController =
+  require("../controllers/pharmacyController");
+
+// ============================================================
+// DEBUG CHECK
+// ============================================================
+
+console.log("========================================");
+console.log("PHARMACY ROUTES LOADED");
+console.log("========================================");
+
+console.log(
+  "addPharmacy:",
+  typeof pharmacyController.addPharmacy
 );
 
+console.log(
+  "getPharmacies:",
+  typeof pharmacyController.getPharmacies
+);
+
+console.log(
+  "getPharmacyProfile:",
+  typeof pharmacyController.getPharmacyProfile
+);
+
+console.log(
+  "getDeliveryPartners:",
+  typeof pharmacyController.getDeliveryPartners
+);
+
+console.log(
+  "addDeliveryPartner:",
+  typeof pharmacyController.addDeliveryPartner
+);
+
+console.log(
+  "deleteDeliveryPartner:",
+  typeof pharmacyController.deleteDeliveryPartner
+);
+
+console.log("========================================");
 
 // ============================================================
-// ADD PHARMACY
+// BASIC PHARMACY ROUTES
 // ============================================================
+
+// ADD PHARMACY
 
 router.post(
   "/add",
-  addPharmacy
+  (req, res) => {
+    return pharmacyController.addPharmacy(req, res);
+  }
 );
 
-
-// ============================================================
 // GET ALL PHARMACIES
-// ============================================================
 
 router.get(
   "/all",
-  getPharmacies
+  (req, res) => {
+    return pharmacyController.getPharmacies(req, res);
+  }
 );
 
-
 // ============================================================
-// GET PHARMACY PROFILE BY PHONE
-// ============================================================
-
-router.get(
-  "/profile/:phone",
-  getPharmacyProfile
-);
-
-
-// ============================================================
-// DELIVERY PARTNERS
+// DELIVERY PARTNER ROUTES
 // ============================================================
 
-
-// ------------------------------------------------------------
 // GET DELIVERY PARTNERS
-// ------------------------------------------------------------
-//
-// GET
-// /api/pharmacies/:phone/delivery-partners
-//
-// Example:
-// /api/pharmacies/9876543210/delivery-partners
-//
 
 router.get(
   "/:phone/delivery-partners",
-  getDeliveryPartners
+  (req, res) => {
+    return pharmacyController.getDeliveryPartners(
+      req,
+      res
+    );
+  }
 );
 
-
-// ------------------------------------------------------------
 // ADD DELIVERY PARTNER
-// ------------------------------------------------------------
-//
-// POST
-// /api/pharmacies/:phone/delivery-partners
-//
-// Body:
-// {
-//   "name": "Rahul",
-//   "phone": "9876543211"
-// }
-//
 
 router.post(
   "/:phone/delivery-partners",
-  addDeliveryPartner
+  (req, res) => {
+    return pharmacyController.addDeliveryPartner(
+      req,
+      res
+    );
+  }
 );
 
-
-// ------------------------------------------------------------
 // DELETE DELIVERY PARTNER
-// ------------------------------------------------------------
-//
-// DELETE
-// /api/pharmacies/:phone/delivery-partners/:partnerId
-//
 
 router.delete(
   "/:phone/delivery-partners/:partnerId",
-  deleteDeliveryPartner
+  (req, res) => {
+    return pharmacyController.deleteDeliveryPartner(
+      req,
+      res
+    );
+  }
 );
 
+// ============================================================
+// GET PHARMACY PROFILE
+// ============================================================
+
+router.get(
+  "/:phone",
+  (req, res) => {
+    return pharmacyController.getPharmacyProfile(
+      req,
+      res
+    );
+  }
+);
+
+// ============================================================
+// EXPORT ROUTER
+// ============================================================
 
 module.exports = router;
