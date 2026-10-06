@@ -35,6 +35,30 @@ const paymentSchema = new mongoose.Schema(
     },
 
     // ============================================================
+    // RAZORPAY QR
+    // ============================================================
+
+    // Razorpay QR Code ID
+    razorpayQrId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    // QR image URL returned by Razorpay
+    razorpayQrImageUrl: {
+      type: String,
+      default: "",
+    },
+
+    // Razorpay QR status
+    // Example: active / closed / expired
+    qrStatus: {
+      type: String,
+      default: "",
+    },
+
+    // ============================================================
     // USER
     // ============================================================
 
@@ -76,6 +100,8 @@ const paymentSchema = new mongoose.Schema(
     // PAYMENT AMOUNT
     // ============================================================
 
+    // Amount is stored in INR rupees
+    // Example: 500 = ₹500
     amount: {
       type: Number,
       required: true,
@@ -128,6 +154,11 @@ const paymentSchema = new mongoose.Schema(
     // RAZORPAY PAYMENT STATUS
     // ============================================================
 
+    // Example:
+    // created
+    // authorized
+    // captured
+    // failed
     razorpayStatus: {
       type: String,
       default: "",
@@ -229,6 +260,10 @@ const paymentSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// ============================================================
+// MODEL
+// ============================================================
 
 module.exports = mongoose.model(
   "Payment",
