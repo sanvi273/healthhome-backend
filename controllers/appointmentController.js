@@ -1,7 +1,6 @@
-const Appointment =
-  require("../models/Appointment");
+const Appointment = require("../models/Appointment");
 
-  const {
+const {
   RtcTokenBuilder,
   RtcRole,
 } = require("agora-token");
@@ -16,27 +15,11 @@ const uploadToCloudinary =
 exports.bookAppointment =
   async (req, res) => {
     try {
-      console.log(
-        "================================="
-      );
-
-      console.log(
-        "BOOK APPOINTMENT"
-      );
-
-      console.log(
-        "BODY =",
-        req.body
-      );
-
-      console.log(
-        "FILES =",
-        req.files
-      );
-
-      console.log(
-        "================================="
-      );
+      console.log("=================================");
+      console.log("BOOK APPOINTMENT");
+      console.log("BODY =", req.body);
+      console.log("FILES =", req.files);
+      console.log("=================================");
 
       const {
         patientName,
@@ -59,6 +42,28 @@ exports.bookAppointment =
       } = req.body;
 
       // ========================================================
+      // DEBUG CONSULTATION TYPE
+      // ========================================================
+
+      console.log("=================================");
+      console.log(
+        "RECEIVED CONSULTATION TYPE =",
+        consultationType
+      );
+
+      console.log(
+        "RECEIVED CONSULTATION TYPE JSON =",
+        JSON.stringify(consultationType)
+      );
+
+      console.log(
+        "RECEIVED CONSULTATION TYPE TYPE =",
+        typeof consultationType
+      );
+
+      console.log("=================================");
+
+      // ========================================================
       // REQUIRED FIELDS
       // ========================================================
 
@@ -72,7 +77,6 @@ exports.bookAppointment =
       ) {
         return res.status(400).json({
           success: false,
-
           message:
             "Patient, doctor ID, doctor name, date and time are required",
         });
@@ -87,6 +91,23 @@ exports.bookAppointment =
         "Video Consultation"
           ? "Video Consultation"
           : "Hospital Visit";
+
+      // ========================================================
+      // DEBUG FINAL CONSULTATION TYPE
+      // ========================================================
+
+      console.log("=================================");
+      console.log(
+        "FINAL CONSULTATION TYPE =",
+        finalConsultationType
+      );
+
+      console.log(
+        "FINAL CONSULTATION TYPE JSON =",
+        JSON.stringify(finalConsultationType)
+      );
+
+      console.log("=================================");
 
       // ========================================================
       // CHECK DUPLICATE SLOT
@@ -113,7 +134,6 @@ exports.bookAppointment =
       if (existingAppointment) {
         return res.status(409).json({
           success: false,
-
           message:
             "This doctor has already been booked for this time slot",
         });
@@ -155,13 +175,8 @@ exports.bookAppointment =
       // CREATE APPOINTMENT
       // ========================================================
 
-      console.log(
-        "================================="
-      );
-
-      console.log(
-        "FINAL APPOINTMENT DATA"
-      );
+      console.log("=================================");
+      console.log("FINAL APPOINTMENT DATA");
 
       console.log(
         "doctorId =",
@@ -189,11 +204,19 @@ exports.bookAppointment =
       );
 
       console.log(
-        "================================="
+        "consultationType =",
+        finalConsultationType
       );
+
+      console.log("=================================");
+
+      // ========================================================
+      // SAVE APPOINTMENT
+      // ========================================================
 
       const appointment =
         await Appointment.create({
+
           // ---------------- Patient ----------------
 
           patientName,
@@ -256,12 +279,16 @@ exports.bookAppointment =
             false,
         });
 
-      console.log(
-        "================================="
-      );
+      // ========================================================
+      // VERIFY SAVED CONSULTATION TYPE
+      // ========================================================
+
+      console.log("=================================");
+      console.log("SAVED APPOINTMENT");
 
       console.log(
-        "SAVED APPOINTMENT"
+        "saved _id =",
+        appointment._id
       );
 
       console.log(
@@ -275,13 +302,28 @@ exports.bookAppointment =
       );
 
       console.log(
-        "saved _id =",
-        appointment._id
+        "saved consultationType =",
+        appointment.consultationType
       );
 
       console.log(
-        "================================="
+        "saved consultationType JSON =",
+        JSON.stringify(
+          appointment.consultationType
+        )
       );
+
+      console.log(
+        "saved consultationStatus =",
+        appointment.consultationStatus
+      );
+
+      console.log(
+        "saved status =",
+        appointment.status
+      );
+
+      console.log("=================================");
 
       // ========================================================
       // RESPONSE
@@ -297,6 +339,7 @@ exports.bookAppointment =
       });
 
     } catch (error) {
+
       console.log(
         "BOOK APPOINTMENT ERROR:",
         error
@@ -314,6 +357,10 @@ exports.bookAppointment =
             "This doctor appointment slot is already booked",
         });
       }
+
+      // ========================================================
+      // SERVER ERROR
+      // ========================================================
 
       return res.status(500).json({
         success: false,
@@ -344,6 +391,7 @@ exports.bookAppointment =
 exports.getAvailableSlots =
   async (req, res) => {
     try {
+
       const doctorId =
         req.params.doctorId
           ?.toString()
@@ -354,10 +402,7 @@ exports.getAvailableSlots =
           ?.toString()
           .trim();
 
-      console.log(
-        "================================="
-      );
-
+      console.log("=================================");
       console.log(
         "GET AVAILABLE APPOINTMENT SLOTS"
       );
@@ -372,9 +417,7 @@ exports.getAvailableSlots =
         appointmentDate
       );
 
-      console.log(
-        "================================="
-      );
+      console.log("=================================");
 
       // ========================================================
       // VALIDATION
@@ -383,7 +426,6 @@ exports.getAvailableSlots =
       if (!doctorId) {
         return res.status(400).json({
           success: false,
-
           message:
             "Doctor ID is required",
         });
@@ -392,7 +434,6 @@ exports.getAvailableSlots =
       if (!appointmentDate) {
         return res.status(400).json({
           success: false,
-
           message:
             "Appointment date is required",
         });
@@ -400,7 +441,6 @@ exports.getAvailableSlots =
 
       // ========================================================
       // DEFAULT DOCTOR SLOTS
-      //
       // 30-minute slots
       // ========================================================
 
@@ -508,6 +548,7 @@ exports.getAvailableSlots =
       });
 
     } catch (error) {
+
       console.log(
         "GET AVAILABLE SLOTS ERROR:",
         error
@@ -533,6 +574,7 @@ exports.getAvailableSlots =
 exports.getAppointments =
   async (req, res) => {
     try {
+
       const appointments =
         await Appointment.find()
           .sort({
@@ -546,6 +588,7 @@ exports.getAppointments =
       });
 
     } catch (error) {
+
       console.log(
         "GET ALL APPOINTMENTS ERROR:",
         error
@@ -568,15 +611,13 @@ exports.getAppointments =
 exports.getDoctorAppointments =
   async (req, res) => {
     try {
+
       const doctorId =
         req.params.doctorId
           ?.toString()
           .trim();
 
-      console.log(
-        "================================="
-      );
-
+      console.log("=================================");
       console.log(
         "GET DOCTOR APPOINTMENTS"
       );
@@ -586,9 +627,7 @@ exports.getDoctorAppointments =
         doctorId
       );
 
-      console.log(
-        "================================="
-      );
+      console.log("=================================");
 
       if (!doctorId) {
         return res.status(400).json({
@@ -644,6 +683,7 @@ exports.getDoctorAppointments =
       const appointments =
         await Appointment.find({
           $or: [
+
             {
               doctorId:
                 doctorId,
@@ -651,8 +691,10 @@ exports.getDoctorAppointments =
 
             {
               $and: [
+
                 {
                   $or: [
+
                     {
                       doctorId: {
                         $exists:
@@ -669,6 +711,7 @@ exports.getDoctorAppointments =
                       doctorId:
                         null,
                     },
+
                   ],
                 },
 
@@ -676,8 +719,10 @@ exports.getDoctorAppointments =
                   doctorName:
                     doctorName,
                 },
+
               ],
             },
+
           ],
         }).sort({
           createdAt: -1,
@@ -693,6 +738,7 @@ exports.getDoctorAppointments =
           appointment,
           index
         ) => {
+
           console.log(
             `APPOINTMENT ${
               index + 1
@@ -720,15 +766,23 @@ exports.getDoctorAppointments =
           );
 
           console.log(
+            "CONSULTATION TYPE =",
+            appointment.consultationType
+          );
+
+          console.log(
+            "CONSULTATION STATUS =",
+            appointment.consultationStatus
+          );
+
+          console.log(
             "STATUS =",
             appointment.status
           );
         }
       );
 
-      console.log(
-        "================================="
-      );
+      console.log("=================================");
 
       return res.json({
         success: true,
@@ -737,6 +791,7 @@ exports.getDoctorAppointments =
       });
 
     } catch (error) {
+
       console.log(
         "GET DOCTOR APPOINTMENTS ERROR:",
         error
@@ -759,6 +814,7 @@ exports.getDoctorAppointments =
 exports.getPatientAppointments =
   async (req, res) => {
     try {
+
       const {
         patientPhone,
       } = req.params;
@@ -777,6 +833,7 @@ exports.getPatientAppointments =
       });
 
     } catch (error) {
+
       console.log(
         "GET PATIENT APPOINTMENTS ERROR:",
         error
@@ -799,6 +856,7 @@ exports.getPatientAppointments =
 exports.getAppointmentById =
   async (req, res) => {
     try {
+
       const appointment =
         await Appointment.findById(
           req.params.id
@@ -820,6 +878,7 @@ exports.getAppointmentById =
       });
 
     } catch (error) {
+
       console.log(
         "GET APPOINTMENT ERROR:",
         error
@@ -842,6 +901,7 @@ exports.getAppointmentById =
 exports.updateAppointmentStatus =
   async (req, res) => {
     try {
+
       const {
         id,
       } = req.params;
@@ -913,6 +973,7 @@ exports.updateAppointmentStatus =
       });
 
     } catch (error) {
+
       console.log(
         "UPDATE APPOINTMENT STATUS ERROR:",
         error
@@ -935,6 +996,7 @@ exports.updateAppointmentStatus =
 exports.updatePaymentStatus =
   async (req, res) => {
     try {
+
       const {
         id,
       } = req.params;
@@ -992,6 +1054,7 @@ exports.updatePaymentStatus =
       });
 
     } catch (error) {
+
       console.log(
         "UPDATE PAYMENT STATUS ERROR:",
         error
@@ -1014,6 +1077,7 @@ exports.updatePaymentStatus =
 exports.deleteAppointment =
   async (req, res) => {
     try {
+
       const appointment =
         await Appointment.findByIdAndDelete(
           req.params.id
@@ -1036,6 +1100,7 @@ exports.deleteAppointment =
       });
 
     } catch (error) {
+
       console.log(
         "DELETE APPOINTMENT ERROR:",
         error
@@ -1058,6 +1123,7 @@ exports.deleteAppointment =
 exports.startConsultation =
   async (req, res) => {
     try {
+
       const appointment =
         await Appointment.findById(
           req.params.id
@@ -1072,6 +1138,10 @@ exports.startConsultation =
         });
       }
 
+      // ========================================================
+      // ONLY VIDEO CONSULTATION
+      // ========================================================
+
       if (
         appointment.consultationType !==
         "Video Consultation"
@@ -1084,12 +1154,20 @@ exports.startConsultation =
         });
       }
 
+      // ========================================================
+      // CREATE / REUSE MEETING ID
+      // ========================================================
+
       const meetingId =
         appointment.meetingId ||
         `healthhome-${appointment._id}`;
 
       appointment.meetingId =
         meetingId;
+
+      // ========================================================
+      // MARK CONSULTATION READY
+      // ========================================================
 
       appointment.consultationStatus =
         "Ready";
@@ -1109,6 +1187,7 @@ exports.startConsultation =
       });
 
     } catch (error) {
+
       console.log(
         "START CONSULTATION ERROR:",
         error
@@ -1131,6 +1210,7 @@ exports.startConsultation =
 exports.joinConsultation =
   async (req, res) => {
     try {
+
       const appointment =
         await Appointment.findByIdAndUpdate(
           req.params.id,
@@ -1164,6 +1244,7 @@ exports.joinConsultation =
       });
 
     } catch (error) {
+
       console.log(
         "JOIN CONSULTATION ERROR:",
         error
@@ -1186,8 +1267,10 @@ exports.joinConsultation =
 exports.checkReadyConsultation =
   async (req, res) => {
     try {
+
       const appointment =
         await Appointment.findOne({
+
           patientPhone:
             req.params.patientPhone,
 
@@ -1203,6 +1286,7 @@ exports.checkReadyConsultation =
               "Cancelled",
             ],
           },
+
         }).sort({
           createdAt: -1,
         });
@@ -1214,6 +1298,7 @@ exports.checkReadyConsultation =
       });
 
     } catch (error) {
+
       console.log(
         "CHECK READY CONSULTATION ERROR:",
         error
@@ -1236,6 +1321,7 @@ exports.checkReadyConsultation =
 exports.completeConsultation =
   async (req, res) => {
     try {
+
       const appointment =
         await Appointment.findByIdAndUpdate(
           req.params.id,
@@ -1272,6 +1358,7 @@ exports.completeConsultation =
       });
 
     } catch (error) {
+
       console.log(
         "COMPLETE CONSULTATION ERROR:",
         error
@@ -1286,196 +1373,258 @@ exports.completeConsultation =
     }
   };
 
-  // ============================================================
+
+// ============================================================
 // GENERATE AGORA VIDEO CONSULTATION TOKEN
 // ============================================================
 
-exports.generateAgoraToken = async (req, res) => {
-  try {
-    const {
-      appointmentId,
-      uid,
-    } = req.body;
+exports.generateAgoraToken =
+  async (req, res) => {
+    try {
 
-    console.log("=================================");
-    console.log("GENERATE AGORA TOKEN");
-    console.log("APPOINTMENT ID =", appointmentId);
-    console.log("UID =", uid);
-    console.log("=================================");
+      const {
+        appointmentId,
+        uid,
+      } = req.body;
 
-    // --------------------------------------------------------
-    // VALIDATION
-    // --------------------------------------------------------
+      console.log(
+        "================================="
+      );
 
-    if (!appointmentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Appointment ID is required",
+      console.log(
+        "GENERATE AGORA TOKEN"
+      );
+
+      console.log(
+        "APPOINTMENT ID =",
+        appointmentId
+      );
+
+      console.log(
+        "UID =",
+        uid
+      );
+
+      console.log(
+        "================================="
+      );
+
+      // ========================================================
+      // VALIDATION
+      // ========================================================
+
+      if (!appointmentId) {
+        return res.status(400).json({
+          success: false,
+
+          message:
+            "Appointment ID is required",
+        });
+      }
+
+      if (
+        uid === undefined ||
+        uid === null
+      ) {
+        return res.status(400).json({
+          success: false,
+
+          message:
+            "UID is required",
+        });
+      }
+
+      const numericUid =
+        Number(uid);
+
+      if (
+        !Number.isInteger(
+          numericUid
+        ) ||
+        numericUid < 0
+      ) {
+        return res.status(400).json({
+          success: false,
+
+          message:
+            "UID must be a valid number",
+        });
+      }
+
+      // ========================================================
+      // FIND APPOINTMENT
+      // ========================================================
+
+      const appointment =
+        await Appointment.findById(
+          appointmentId
+        );
+
+      if (!appointment) {
+        return res.status(404).json({
+          success: false,
+
+          message:
+            "Appointment not found",
+        });
+      }
+
+      // ========================================================
+      // ONLY VIDEO CONSULTATIONS
+      // ========================================================
+
+      if (
+        appointment.consultationType !==
+        "Video Consultation"
+      ) {
+        return res.status(400).json({
+          success: false,
+
+          message:
+            "This appointment is not a video consultation",
+        });
+      }
+
+      // ========================================================
+      // CONSULTATION MUST BE READY OR JOINED
+      // ========================================================
+
+      if (
+        appointment.consultationStatus !==
+          "Ready" &&
+        appointment.consultationStatus !==
+          "Joined"
+      ) {
+        return res.status(400).json({
+          success: false,
+
+          message:
+            "Video consultation has not been started yet",
+        });
+      }
+
+      // ========================================================
+      // CHECK AGORA CREDENTIALS
+      // ========================================================
+
+      const appId =
+        process.env.AGORA_APP_ID;
+
+      const appCertificate =
+        process.env.AGORA_APP_CERTIFICATE;
+
+      if (
+        !appId ||
+        !appCertificate
+      ) {
+        console.error(
+          "AGORA_APP_ID or AGORA_APP_CERTIFICATE missing"
+        );
+
+        return res.status(500).json({
+          success: false,
+
+          message:
+            "Agora server configuration is missing",
+        });
+      }
+
+      // ========================================================
+      // CHANNEL NAME
+      // ========================================================
+
+      const channelName =
+        appointment.meetingId ||
+        `healthhome-${appointment._id}`;
+
+      // ========================================================
+      // TOKEN EXPIRATION
+      // 1 HOUR
+      // ========================================================
+
+      const tokenExpirationInSeconds =
+        60 * 60;
+
+      const currentTimestamp =
+        Math.floor(
+          Date.now() / 1000
+        );
+
+      const privilegeExpiredTs =
+        currentTimestamp +
+        tokenExpirationInSeconds;
+
+      // ========================================================
+      // GENERATE RTC TOKEN
+      // ========================================================
+
+      const token =
+        RtcTokenBuilder.buildTokenWithUid(
+          appId,
+          appCertificate,
+          channelName,
+          numericUid,
+          RtcRole.PUBLISHER,
+          privilegeExpiredTs,
+          privilegeExpiredTs
+        );
+
+      console.log(
+        "Agora token generated successfully"
+      );
+
+      console.log(
+        "CHANNEL =",
+        channelName
+      );
+
+      console.log(
+        "UID =",
+        numericUid
+      );
+
+      console.log(
+        "================================="
+      );
+
+      // ========================================================
+      // RESPONSE
+      // ========================================================
+
+      return res.status(200).json({
+        success: true,
+
+        appId:
+          appId,
+
+        channelName:
+          channelName,
+
+        uid:
+          numericUid,
+
+        token:
+          token,
+
+        expiresAt:
+          privilegeExpiredTs,
       });
-    }
 
-    if (uid === undefined || uid === null) {
-      return res.status(400).json({
-        success: false,
-        message: "UID is required",
-      });
-    }
+    } catch (error) {
 
-    const numericUid = Number(uid);
-
-    if (!Number.isInteger(numericUid) || numericUid < 0) {
-      return res.status(400).json({
-        success: false,
-        message: "UID must be a valid number",
-      });
-    }
-
-    // --------------------------------------------------------
-    // FIND APPOINTMENT
-    // --------------------------------------------------------
-
-    const appointment =
-      await Appointment.findById(appointmentId);
-
-    if (!appointment) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found",
-      });
-    }
-
-    // --------------------------------------------------------
-    // ONLY VIDEO CONSULTATIONS
-    // --------------------------------------------------------
-
-    if (
-      appointment.consultationType !==
-      "Video Consultation"
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "This appointment is not a video consultation",
-      });
-    }
-
-    // --------------------------------------------------------
-    // CONSULTATION MUST BE READY
-    // --------------------------------------------------------
-
-    if (
-      appointment.consultationStatus !== "Ready" &&
-      appointment.consultationStatus !== "Joined"
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Video consultation has not been started yet",
-      });
-    }
-
-    // --------------------------------------------------------
-    // CHECK AGORA CREDENTIALS
-    // --------------------------------------------------------
-
-    const appId =
-      process.env.AGORA_APP_ID;
-
-    const appCertificate =
-      process.env.AGORA_APP_CERTIFICATE;
-
-    if (!appId || !appCertificate) {
       console.error(
-        "AGORA_APP_ID or AGORA_APP_CERTIFICATE missing"
+        "GENERATE AGORA TOKEN ERROR:",
+        error
       );
 
       return res.status(500).json({
         success: false,
+
         message:
-          "Agora server configuration is missing",
+          "Failed to generate Agora token",
+
+        error:
+          error.message,
       });
     }
-
-    // --------------------------------------------------------
-    // CHANNEL NAME
-    // --------------------------------------------------------
-
-    const channelName =
-      appointment.meetingId ||
-      `healthhome-${appointment._id}`;
-
-    // --------------------------------------------------------
-    // TOKEN EXPIRATION
-    // 1 hour
-    // --------------------------------------------------------
-
-    const tokenExpirationInSeconds = 60 * 60;
-
-    const currentTimestamp =
-      Math.floor(Date.now() / 1000);
-
-    const privilegeExpiredTs =
-      currentTimestamp +
-      tokenExpirationInSeconds;
-
-    // --------------------------------------------------------
-    // GENERATE RTC TOKEN
-    // --------------------------------------------------------
-
-    const token =
-      RtcTokenBuilder.buildTokenWithUid(
-        appId,
-        appCertificate,
-        channelName,
-        numericUid,
-        RtcRole.PUBLISHER,
-        privilegeExpiredTs,
-        privilegeExpiredTs
-      );
-
-    console.log(
-      "Agora token generated successfully"
-    );
-
-    console.log(
-      "CHANNEL =",
-      channelName
-    );
-
-    console.log(
-      "UID =",
-      numericUid
-    );
-
-    console.log(
-      "================================="
-    );
-
-    // --------------------------------------------------------
-    // RESPONSE
-    // --------------------------------------------------------
-
-    return res.status(200).json({
-      success: true,
-      appId: appId,
-      channelName: channelName,
-      uid: numericUid,
-      token: token,
-      expiresAt: privilegeExpiredTs,
-    });
-
-  } catch (error) {
-
-    console.error(
-      "GENERATE AGORA TOKEN ERROR:",
-      error
-    );
-
-    return res.status(500).json({
-      success: false,
-      message:
-        "Failed to generate Agora token",
-      error: error.message,
-    });
-  }
-};
+  };
