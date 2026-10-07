@@ -1699,9 +1699,7 @@ const receipt =
 
 
 
-          paymentId:
-
-            "",
+          
 
 
 
@@ -2050,30 +2048,39 @@ const receipt =
 
 
   } catch (error) {
+  console.error("========================================");
+  console.error("CREATE DOCTOR PAYMENT OUTER ERROR");
+  console.error("========================================");
+  console.error("MESSAGE:", error?.message);
+  console.error("NAME:", error?.name);
+  console.error("STACK:", error?.stack);
 
+  if (error?.response?.data) {
+    console.error(
+      "RAZORPAY RESPONSE:",
+      JSON.stringify(error.response.data, null, 2)
+    );
+  }
 
+  if (error?.error?.description) {
+    console.error("RAZORPAY DESCRIPTION:", error.error.description);
+  }
 
-    console.error(
+  if (error?.error?.reason) {
+    console.error("RAZORPAY REASON:", error.error.reason);
+  }
 
-      "❌ CREATE DOCTOR ORDER ERROR:",
+  console.error("========================================");
 
-      error
-
-    );
-
-
-
-    return res.status(500).json({
-
-      success: false,
-
-      message:
-
-        "Unable to create doctor payment order.",
-
-    });
-
-  }
+  return res.status(500).json({
+    success: false,
+    message:
+      error?.response?.data?.error?.description ||
+      error?.error?.description ||
+      error?.message ||
+      "Unable to create doctor payment order.",
+  });
+}
 
 };
 
