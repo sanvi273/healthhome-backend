@@ -1444,13 +1444,8 @@ exports.createDoctorOrder = async (req, res) => {
 
 
 
-    const receipt =
-
-      `HH_DOCTOR_${String(
-
-        appointment._id
-
-      ).slice(-20)}_${Date.now()}`;
+const receipt =
+  `HH_${String(appointment._id)}_${Date.now()}`;
 
 
 
