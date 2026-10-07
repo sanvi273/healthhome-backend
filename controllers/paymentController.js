@@ -1445,7 +1445,7 @@ exports.createDoctorOrder = async (req, res) => {
 
 
 const receipt =
-  `HH_${String(appointment._id)}_${Date.now()}`;
+  `HH_${String(appointment._id).slice(-12)}_${Date.now()}`;
 
 
 
@@ -2392,79 +2392,37 @@ exports.verifyDoctorPayment = async (
 
 
 
-    const generatedSignature =
+const generatedSignature = crypto
+  .createHmac("sha256", razorpayKeySecret)
+  .update(
+    `${razorpay_order_id}|${razorpay_payment_id}`
+  )
+  .digest("hex");
 
-      crypto
+const generatedBuffer = Buffer.from(
+  generatedSignature,
+  "utf8"
+);
 
-        .createHmac(
+const receivedBuffer = Buffer.from(
+  razorpay_signature,
+  "utf8"
+);
 
-          "sha256",
+const signatureMatches =
+  generatedBuffer.length === receivedBuffer.length &&
+  crypto.timingSafeEqual(
+    generatedBuffer,
+    receivedBuffer
+  );
 
-          razorpayKeySecret
-
-        )
-
-        .update(
-
-          `${razorpay_order_id}|${razorpay_payment_id}`
-
-        )
-
-        .digest("hex");
-
-
-
-
-
-    const signatureMatches =
-
-      crypto.timingSafeEqual(
-
-        Buffer.from(
-
-          generatedSignature,
-
-          "utf8"
-
-        ),
-
-        Buffer.from(
-
-          razorpay_signature,
-
-          "utf8"
-
-        )
-
-      );
-
-
-
-
-
-    if (!signatureMatches) {
-
-
-
-      return res.status(400).json({
-
-
-
-        success: false,
-
-
-
-        paid: false,
-
-
-
-        message:
-
-          "Invalid Razorpay payment signature.",
-
-      });
-
-    }
+if (!signatureMatches) {
+  return res.status(400).json({
+    success: false,
+    paid: false,
+    message: "Invalid Razorpay payment signature.",
+  });
+}
 
 
 
