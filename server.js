@@ -5,7 +5,9 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
-// ================= IMPORT ROUTES =================
+// ============================================================
+// IMPORT ROUTES
+// ============================================================
 
 const authRoutes = require("./routes/authRoutes");
 const doctorRoutes = require("./routes/doctorRoutes");
@@ -22,11 +24,16 @@ const sampleCollectorRoutes = require("./routes/sampleCollectorRoutes");
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const verificationRoutes = require("./routes/verificationRoutes");
-// ================= APP =================
+
+// ============================================================
+// APP
+// ============================================================
 
 const app = express();
 
-// ================= CORS =================
+// ============================================================
+// CORS
+// ============================================================
 
 app.use(cors());
 
@@ -36,10 +43,13 @@ app.use(cors());
 //
 // IMPORTANT:
 //
-// This route must receive the raw request body so that
-// Razorpay webhook signature verification can be performed.
+// Razorpay webhook signature verification needs the ORIGINAL
+// raw request body.
 //
-// It MUST come before express.json().
+// Therefore this MUST be registered before express.json().
+//
+// URL:
+// POST /api/payment/webhook
 //
 // ============================================================
 
@@ -50,7 +60,9 @@ app.use(
   })
 );
 
-// ================= NORMAL BODY PARSERS =================
+// ============================================================
+// NORMAL BODY PARSERS
+// ============================================================
 
 app.use(express.json());
 
@@ -60,138 +72,179 @@ app.use(
   })
 );
 
-// ================= ROUTES =================
+// ============================================================
+// AUTH ROUTES
+// ============================================================
 
 app.use(
   "/api/auth",
   authRoutes
 );
 
+// ============================================================
+// DOCTOR ROUTES
+// ============================================================
+
 app.use(
   "/api/doctors",
   doctorRoutes
 );
+
+// ============================================================
+// LAB ROUTES
+// ============================================================
 
 app.use(
   "/api/labs",
   labRoutes
 );
 
+// ============================================================
+// PHARMACY ROUTES
+// ============================================================
+
 app.use(
   "/api/pharmacies",
   pharmacyRoutes
 );
+
+// ============================================================
+// APPOINTMENT ROUTES
+// ============================================================
 
 app.use(
   "/api/appointments",
   appointmentRoutes
 );
 
+// ============================================================
+// ADDRESS ROUTES
+// ============================================================
+
 app.use(
-  "/api/addresses", 
+  "/api/addresses",
   addressRoutes
 );
+
+// ============================================================
+// PROFILE ROUTES
+// ============================================================
 
 app.use(
   "/api/profile",
   profileRoutes
 );
 
+// ============================================================
+// MEDICINE ROUTES
+// ============================================================
+
 app.use(
   "/api/medicines",
   medicineRoutes
 );
+
+// ============================================================
+// ORDER ROUTES
+// ============================================================
 
 app.use(
   "/api/orders",
   orderRoutes
 );
 
+// ============================================================
+// CART ROUTES
+// ============================================================
+
 app.use(
   "/api/cart",
   cartRoutes
 );
 
-console.log(
-  "Cart Routes Loaded Successfully"
-);
+console.log("Cart Routes Loaded Successfully");
 
-console.log(cartRoutes);
+// ============================================================
+// LAB ORDER ROUTES
+// ============================================================
 
 app.use(
   "/api/lab-orders",
   labOrderRoutes
 );
 
+// ============================================================
+// SAMPLE COLLECTOR ROUTES
+// ============================================================
+
 app.use(
   "/api/sample-collectors",
   sampleCollectorRoutes
 );
 
-console.log(
-  "Mounting prescription routes..."
-);
+// ============================================================
+// PRESCRIPTION ROUTES
+// ============================================================
+
+console.log("Mounting prescription routes...");
 
 app.use(
   "/api/prescriptions",
   prescriptionRoutes
 );
 
-console.log(
-  "Prescription routes mounted."
-);
+console.log("Prescription routes mounted.");
 
-console.log(
-  "Mounting payment routes..."
-);
+// ============================================================
+// PAYMENT ROUTES
+// ============================================================
+
+console.log("Mounting payment routes...");
 
 app.use(
   "/api/payment",
   paymentRoutes
 );
 
-console.log(
-  "Payment routes mounted."
-);
+console.log("Payment routes mounted.");
+
+// ============================================================
+// VERIFICATION ROUTES
+// ============================================================
 
 app.use(
   "/api/verification",
   verificationRoutes
 );
 
-console.log(
-  "Verification routes mounted."
-);
-// ================= TEST ROUTE =================
+console.log("Verification routes mounted.");
+
+// ============================================================
+// TEST ROUTE
+// ============================================================
 
 app.get("/", (req, res) => {
-  res.send(
-    "HealthHome Backend Running"
-  );
+  res.send("HealthHome Backend Running");
 });
 
-// ================= MONGODB =================
+// ============================================================
+// MONGODB
+// ============================================================
 
 mongoose
-  .connect(
-    process.env.MONGO_URL
-  )
+  .connect(process.env.MONGO_URL)
   .then(() => {
-    console.log(
-      "✅ MongoDB Connected"
-    );
+    console.log("✅ MongoDB Connected");
   })
   .catch((err) => {
-    console.log(
-      "MongoDB Error:",
-      err
-    );
+    console.log("❌ MongoDB Error:", err);
   });
 
-// ================= SERVER =================
+// ============================================================
+// SERVER
+// ============================================================
 
-const PORT =
-  process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(
   PORT,

@@ -1,51 +1,29 @@
 const express = require("express");
-
 const router = express.Router();
 
 const paymentController = require("../controllers/paymentController");
+const upload = require("../middleware/upload");
 
-// ============================================================
-// CREATE RAZORPAY ORDER
-// Used for UPI, Cards, Net Banking, Wallets, etc.
-// ============================================================
+// Existing Medicine/Lab payment flow
+router.post("/create-order", paymentController.createOrder);
+router.post("/verify-payment", paymentController.verifyPayment);
 
+// Doctor appointment payment flow
+// Selected reports are uploaded with the pending appointment.
 router.post(
-  "/create-order",
-  paymentController.createOrder
+  "/create-doctor-order",
+  upload.array("reports"),
+  paymentController.createDoctorOrder
 );
 
-// ============================================================
-// VERIFY RAZORPAY PAYMENT
-// ============================================================
+router.post("/verify-doctor-payment", paymentController.verifyDoctorPayment);
+router.post("/cancel-doctor-order", paymentController.cancelDoctorOrder);
 
-router.post(
-  "/verify-payment",
-  paymentController.verifyPayment
-);
+// Razorpay webhook
+router.post("/webhook", paymentController.webhook);
 
-// ============================================================
-// RAZORPAY WEBHOOK
-// ============================================================
-
-router.post(
-  "/webhook",
-  paymentController.webhook
-);
-
-// ============================================================
-// OLD QR ENDPOINTS
-// Kept temporarily so older Flutter builds do not crash.
-// New payment flow does NOT use these.
-// ============================================================
-
-router.get(
-  "/qr-status/:paymentRecordId",
-  paymentController.getQrPaymentStatus
-);
-
-router.post(
-  "/close-qr",
-  paymentController.closeQr
-);
+// Old QR compatibility endpoints
+router.get("/qr-status/:paymentRecordId", paymentController.getQrPaymentStatus);
+router.post("/close-qr", paymentController.closeQr);
 
 module.exports = router;
