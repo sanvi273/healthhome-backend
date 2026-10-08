@@ -1715,9 +1715,7 @@ const receipt =
 
 
 
-          userId:
-
-            safeString(userId),
+          userId: safeString(userId) || safeString(patientPhone),
 
 
 
