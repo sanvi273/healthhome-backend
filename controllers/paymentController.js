@@ -4302,9 +4302,7 @@ exports.createOrder = async (req, res) => {
 
 
 
-          userId:
-
-            safeString(userId),
+          userId: normalizedUserId,
 
 
 
