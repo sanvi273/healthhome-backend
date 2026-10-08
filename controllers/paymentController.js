@@ -1707,7 +1707,12 @@ const receipt =
 
             razorpayOrder.id,
 
+// Temporary unique value until Razorpay payment succeeds
+paymentId:
+  `PENDING_${razorpayOrder.id}`,
 
+signature:
+  "",
 
           signature:
 
